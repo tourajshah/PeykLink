@@ -158,3 +158,43 @@ export const getMyTrips = query({
   },
 });
 
+
+export const updateTrip = mutation({
+  args: {
+    tripId: v.id("trips"),
+    availableSpace: v.string(),
+    description: v.optional(v.string()),
+    acceptedItemTypes: v.optional(v.string()),
+
+  },
+  handler: async (ctx, args) => {
+
+    const currentUser = await getAuthenticatedUser(ctx)
+
+    const trip = await ctx.db.get(args.tripId)
+
+    if(!trip) {
+      throw new Error ("Trip not found")
+    }
+
+    if(trip.travelerId !== currentUser._id) {
+      throw new Error ("You are not authorized to update this request.")
+    }
+
+    const updates: {
+      availableSpace?: string,
+      description?: string,
+      acceptedItemTypes?: string,
+    } = {}
+
+    if(args.availableSpace !== undefined) updates.availableSpace = args.availableSpace
+    if(args.acceptedItemTypes !== undefined) updates.acceptedItemTypes = args.acceptedItemTypes
+    if(args.description !== undefined) updates.description = args.description
+    
+    await ctx.db.patch(trip._id, updates);
+
+    return { success: true};
+  },
+})
+
+

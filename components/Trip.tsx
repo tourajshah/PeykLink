@@ -2,10 +2,10 @@ import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { styles } from '@/styles/feed.styles';
 import { useUser } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from 'convex/react';
 import { Image } from 'expo-image';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 
@@ -94,9 +94,19 @@ export default function Trip({trip}: TripProps) {
             {/* if owner show delete button */}
 
             {trip.traveler._id === currentUser?._id ? (
-                <TouchableOpacity onPress={handleDeleteTrip}>
-                    <Ionicons name='trash-outline' size={20} color={COLORS.primary} />
-                </TouchableOpacity>
+                <><TouchableOpacity onPress={handleDeleteTrip}>
+                      <Ionicons name='trash-outline' size={20} color={COLORS.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                        onPress={() => { // Wrap it in a function
+                            router.push({
+                            pathname: '/trips', 
+                            params: { trip: JSON.stringify(trip) }
+                            });
+                        }}
+                        >
+                          <AntDesign name='edit' size={20} color={COLORS.primary} />
+                    </TouchableOpacity></>
             ) : (
                 <TouchableOpacity>
                     <Ionicons name='ellipsis-horizontal' size={20} color={COLORS.white} />
