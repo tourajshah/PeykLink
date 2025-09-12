@@ -95,7 +95,7 @@ export default function Request({request}: RequestProps) {
     <View style={styles.post}>
 
         <View style={styles.postHeader}>
-            <Link href={"/"}>
+            <Link href={`/user/${request.requester._id}`} asChild>
                 <TouchableOpacity style={styles.postHeaderLeft}>
                     <Image
                         source={{ uri: request.requester.image }}

@@ -78,7 +78,7 @@ export default function Trip({trip}: TripProps) {
     <View style={styles.post}>
 
         <View style={styles.postHeader}>
-            <Link href={"/"}>
+            <Link href={`/user/${trip.traveler._id}`} asChild>
                 <TouchableOpacity style={styles.postHeaderLeft}>
                     <Image
                         source={{ uri: trip.traveler.image }}
