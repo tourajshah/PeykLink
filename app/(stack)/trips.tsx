@@ -1,4 +1,3 @@
-import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useMutation } from 'convex/react';
@@ -7,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -23,156 +23,192 @@ import { City, cityData } from '@/constants/cityData';
 import { api } from '@/convex/_generated/api';
 
 const COLORS = {
- primary: '#007BFF',
- white: '#FFFFFF',
- black: '#000000',
- grey: '#808080',
- lightGrey: '#333333',
- dark: '#1C1C1E',
- disabled: '#a9a9a9',
- selected: '#333',
+ primary: '#0A84FF',
+ background: '#000000',
+ contentBackground: '#1C1C1E',
+ text: '#FFFFFF',
+ textSecondary: '#8E8E93',
+ placeholder: '#5A5A5F',
+ separator: '#38383A',
+ disabled: '#4A4A4E',
+ error: '#FF453A', // New color for errors
 };
 
+const airlines = [
+ { name: 'Turkish Airlines', code: 'TK' },
+ { name: 'Pegasus Airlines', code: 'PC' },
+ { name: 'Lufthansa', code: 'LH' },
+ { name: 'Emirates', code: 'EK' },
+ { name: 'Qatar Airways', code: 'QR' },
+ { name: 'Other', code: 'Other' },
+];
+type Airline = typeof airlines[0];
 const itemTypes = ["Electronics", "Clothing", "Documents", "Books", "Cosmetics", "Other"];
 
 function getFlagEmoji(countryCode: string): string {
- if (!countryCode || countryCode.length !== 2) {
-  return '🏳️';
- }
- const codePoints = countryCode
-  .toUpperCase()
-  .split('')
-  .map(char => 127397 + char.charCodeAt(0));
+ if (!countryCode || countryCode.length !== 2) return '🏳️';
+ const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt(0));
  return String.fromCodePoint(...codePoints);
 }
 
 export default function TripsScreen() {
  const router = useRouter();
- const { user } = useUser();
-
- // --- STEP 1: Detect Mode and Get Existing Data (As you provided) ---
  const params = useLocalSearchParams();
- const existingTrip = useMemo(() => {
-  return params.trip ? JSON.parse(params.trip as string) : null;
- }, [params.trip]);
-
+ const existingTrip = useMemo(() => params.trip ? JSON.parse(params.trip as string) : null, [params.trip]);
  const isEditMode = existingTrip !== null;
 
- // --- Form State ---
  const [origin, setOrigin] = useState<City | null>(null);
  const [destination, setDestination] = useState<City | null>(null);
+ const [date, setDate] = useState(new Date());
  const [availableSpaceValue, setAvailableSpaceValue] = useState('');
  const [availableSpaceUnit, setAvailableSpaceUnit] = useState('kg');
  const [acceptedItemTypes, setAcceptedItemTypes] = useState<string[]>([]);
  const [caption, setCaption] = useState('');
- const [date, setDate] = useState(new Date());
+ const [airline, setAirline] = useState<Airline | null>(null);
 
- // --- UI Control State ---
- const [isSubmitting, setIsSubmitting] = useState(false);
- const [showPicker, setShowPicker] = useState(false);
- const [itemDropdownOpen, setItemDropdownOpen] = useState(false);
- const [isSuggestionModalVisible, setSuggestionModalVisible] = useState(false);
- const [suggestionType, setSuggestionType] = useState<'origin' | 'destination'>('origin');
- const [searchQuery, setSearchQuery] = useState('');
+ const [originQuery, setOriginQuery] = useState('');
+ const [destinationQuery, setDestinationQuery] = useState('');
  const [suggestions, setSuggestions] = useState<City[]>([]);
+ const [activeSuggestionType, setActiveSuggestionType] = useState<'origin' | 'destination' | null>(null);
+ 
+ const [isSubmitting, setIsSubmitting] = useState(false);
+ const [showDatePicker, setShowDatePicker] = useState(false);
+ const [itemModalVisible, setItemModalVisible] = useState(false);
+ const [airlineModalVisible, setAirlineModalVisible] = useState(false);
+ 
+ // New state to track if user has tried to submit
+ const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
- // --- STEP 2: Populate Form in Edit Mode (As you provided) ---
  useEffect(() => {
   if (isEditMode && existingTrip) {
-    setOrigin(existingTrip.originCity ? { name: existingTrip.originCity, country: existingTrip.originCountry, countryCode: existingTrip.originCountryCode } : null);
-    setDestination(existingTrip.destinationCity ? { name: existingTrip.destinationCity, country: existingTrip.destinationCountry, countryCode: existingTrip.destinationCountryCode } : null);
-    setDate(new Date(existingTrip.arrivalDate));
-    setCaption(existingTrip.description || '');
-
-    const spaceParts = (existingTrip.availableSpace || '').split(' ');
-    if (spaceParts.length === 2) {
-     setAvailableSpaceValue(spaceParts[0]);
-     setAvailableSpaceUnit(spaceParts[1]);
-    }
-
-    if (existingTrip.acceptedItemTypes) {
-     setAcceptedItemTypes(existingTrip.acceptedItemTypes.split(', '));
-    }
+   const originCity = existingTrip.originCity ? { name: existingTrip.originCity, country: existingTrip.originCountry, countryCode: existingTrip.originCountryCode } : null;
+   const destCity = existingTrip.destinationCity ? { name: existingTrip.destinationCity, country: existingTrip.destinationCountry, countryCode: existingTrip.destinationCountryCode } : null;
+   setOrigin(originCity);
+   setDestination(destCity);
+   setOriginQuery(originCity ? `${originCity.name}, ${originCity.country}`: '');
+   setDestinationQuery(destCity ? `${destCity.name}, ${destCity.country}`: '');
+   setDate(new Date(existingTrip.arrivalDate));
+   setCaption(existingTrip.description || '');
+   if (existingTrip.airline) {
+    const foundAirline = airlines.find(a => a.name === existingTrip.airline);
+    setAirline(foundAirline || { name: existingTrip.airline, code: 'Other' });
+   }
+   const spaceParts = (existingTrip.availableSpace || '').split(' ');
+   if (spaceParts.length === 2) {
+    setAvailableSpaceValue(spaceParts[0]);
+    setAvailableSpaceUnit(spaceParts[1]);
+   }
+   if (existingTrip.acceptedItemTypes) {
+    setAcceptedItemTypes(existingTrip.acceptedItemTypes.split(', '));
+   }
   }
  }, [isEditMode, existingTrip]);
 
- // --- STEP 3: Use Both Mutations ---
  const createTrip = useMutation(api.trips.createTrip);
  const updateTrip = useMutation(api.trips.updateTrip);
 
- // --- City Suggestion Modal Logic (Unchanged) ---
- const openSuggestionModal = (type: 'origin' | 'destination') => {
-  setSuggestionType(type);
-  setSearchQuery(type === 'origin' ? origin?.name ?? '' : destination?.name ?? '');
-  setSuggestions([]);
-  setSuggestionModalVisible(true);
- };
-
- const handleSearchChange = (text: string) => {
-  setSearchQuery(text);
+ const handleSearchChange = (text: string, type: 'origin' | 'destination') => {
+  if (type === 'origin') {
+   setOriginQuery(text);
+   setOrigin(null); // IMPORTANT: Invalidate the city object when the user types
+  } else {
+   setDestinationQuery(text);
+   setDestination(null); // IMPORTANT: Invalidate the city object when the user types
+  }
+  
+  setActiveSuggestionType(type);
   if (text.length > 1) {
-   const filtered = cityData.filter(city => city.name.toLowerCase().startsWith(text.toLowerCase())).slice(0, 100);
+   const filtered = cityData.filter(city => 
+    city.name.toLowerCase().startsWith(text.toLowerCase()) || 
+    city.country.toLowerCase().startsWith(text.toLowerCase())
+   ).slice(0, 5);
    setSuggestions(filtered);
   } else {
    setSuggestions([]);
   }
  };
 
- const onSelectCity = (city: City) => {
-  if (suggestionType === 'origin') setOrigin(city);
-  else setDestination(city);
-  setSuggestionModalVisible(false);
+ const onSelectCity = (city: City, type: 'origin' | 'destination') => {
+  const fullText = `${city.name}, ${city.country}`;
+  if (type === 'origin') {
+   setOrigin(city);
+   setOriginQuery(fullText);
+  } else {
+   setDestination(city);
+   setDestinationQuery(fullText);
+  }
+  setSuggestions([]);
+  setActiveSuggestionType(null);
+  Keyboard.dismiss();
+ };
+
+ // New handler to validate city input when the user taps away
+ const handleCityInputBlur = (type: 'origin' | 'destination') => {
+    setTimeout(() => {
+        setActiveSuggestionType(null);
+        if (type === 'origin') {
+            // If the text in the box doesn't match a valid, selected city, clear it.
+            if (origin === null && originQuery !== '') {
+                setOriginQuery(''); 
+                Alert.alert("Invalid City", "Please select a city from the list for your origin.");
+            }
+        } else { // destination
+            if (destination === null && destinationQuery !== '') {
+                setDestinationQuery('');
+                Alert.alert("Invalid City", "Please select a city from the list for your destination.");
+            }
+        }
+    }, 150); // Small delay to allow tap on suggestion to register
  };
 
  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-  const currentDate = selectedDate || date;
-  setShowPicker(Platform.OS === 'ios');
-  if (event.type === 'set') {
-   setDate(currentDate);
-  }
+    setShowDatePicker(false);
+    if (event.type === 'set') {
+     const currentDate = selectedDate || date;
+     setDate(currentDate);
+    }
  };
-
- const resetForm = () => {
-  setOrigin(null);
-  setDestination(null);
-  setAvailableSpaceValue('');
-  setAvailableSpaceUnit('kg');
-  setAcceptedItemTypes([]);
-  setDate(new Date());
-  setCaption('');
- };
-
- // --- STEP 4: Unified HandleSubmit Function ---
+ 
  const handleSubmit = async () => {
+  setHasAttemptedSubmit(true); // Mark that the user has tried to submit
+
+  // Check for invalid city text even if origin/destination objects are null
   if (!origin || !destination || !availableSpaceValue) {
-   Alert.alert('Missing Information', 'Please fill in all required fields.');
-   return;
+    let errorMessage = "Please fill in all required fields marked with *";
+    if (!origin) errorMessage = "Please select a valid origin city from the list.";
+    else if (!destination) errorMessage = "Please select a valid destination city from the list.";
+    else if (!availableSpaceValue) errorMessage = "Please enter the available space.";
+    
+    Alert.alert('Missing Information', errorMessage);
+    return;
   }
+  
   setIsSubmitting(true);
   try {
    if (isEditMode) {
-    // --- EDIT LOGIC ---
     await updateTrip({
      tripId: existingTrip._id,
      availableSpace: `${availableSpaceValue} ${availableSpaceUnit}`,
      description: caption,
      acceptedItemTypes: acceptedItemTypes.join(', '),
+    //  airline: airline?.name,
     });
     Alert.alert('Success!', 'Your trip has been updated.');
    } else {
-    // --- CREATE LOGIC ---
     await createTrip({
      originCity: origin.name,
      originCountry: origin.country,
+    //  originCountryCode: origin.countryCode,
      destinationCity: destination.name,
      destinationCountry: destination.country,
+    //  destinationCountryCode: destination.countryCode,
      arrivalDate: date.toISOString().split('T')[0],
      availableSpace: `${availableSpaceValue} ${availableSpaceUnit}`,
      acceptedItemTypes: acceptedItemTypes.join(', '),
      description: caption,
+    //  airline: airline?.name,
     });
     Alert.alert('Success!', 'Your trip has been shared.');
-    resetForm();
    }
    router.back();
   } catch (error) {
@@ -182,146 +218,241 @@ export default function TripsScreen() {
    setIsSubmitting(false);
   }
  };
-
- // --- STEP 5: Dynamic UI ---
+ 
+ const isFormComplete = origin && destination && availableSpaceValue;
  const headerTitle = isEditMode ? 'Edit Trip' : 'New Trip';
- const submitButtonText = isEditMode ? 'Save Changes' : 'Share';
-
+ const submitButtonText = isEditMode ? 'Save Changes' : 'Share Trip';
+ 
  return (
   <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-   <View style={styles.contentContainer}>
-    <View style={styles.header}>
-     <TouchableOpacity onPress={() => router.back()} disabled={isSubmitting}>
-      <Ionicons name="close-outline" size={32} color={isSubmitting ? COLORS.grey : COLORS.white} />
-     </TouchableOpacity>
-     <Text style={styles.headerTitle}>{headerTitle}</Text>
-     <TouchableOpacity
-      style={[styles.shareButton, isSubmitting && styles.shareButtonDisabled]}
-      disabled={isSubmitting || !origin || !destination}
-      onPress={handleSubmit}>
-      {isSubmitting ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={styles.shareButtonText}>{submitButtonText}</Text>}
-     </TouchableOpacity>
-    </View>
-
-    <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-     <View style={[styles.content, isSubmitting && styles.contentDisabled]}>
-      <View style={styles.inputSection}>
-       <Text style={styles.label}>From</Text>
-       <TouchableOpacity style={styles.input} onPress={() => openSuggestionModal('origin')} disabled={isEditMode}>
-        <Text style={origin ? styles.inputText : styles.placeholderText}>
-         {origin ? `${getFlagEmoji(origin.countryCode)} ${origin.name}, ${origin.country}` : 'Origin City'}
-        </Text>
-       </TouchableOpacity>
-      </View>
+   <View style={styles.header}>
+    <TouchableOpacity onPress={() => router.back()} disabled={isSubmitting}>
+     <Ionicons name="close-outline" size={32} color={isSubmitting ? COLORS.disabled : COLORS.text} />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>{headerTitle}</Text>
+    <TouchableOpacity
+     style={[styles.shareButton, (!isFormComplete || isSubmitting) && styles.shareButtonDisabled]}
+     disabled={!isFormComplete || isSubmitting}
+     onPress={handleSubmit}>
+     {isSubmitting ? <ActivityIndicator size="small" color={COLORS.text} /> : <Text style={styles.shareButtonText}>{submitButtonText}</Text>}
+    </TouchableOpacity>
+   </View>
+   
+    <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={!activeSuggestionType}
+    >
+     <View style={isSubmitting && styles.contentDisabled}>
 
       <View style={styles.inputSection}>
-       <Text style={styles.label}>To</Text>
-       <TouchableOpacity style={styles.input} onPress={() => openSuggestionModal('destination')} disabled={isEditMode}>
-        <Text style={destination ? styles.inputText : styles.placeholderText}>
-         {destination ? `${getFlagEmoji(destination.countryCode)} ${destination.name}, ${destination.country}` : 'Destination City'}
-        </Text>
-       </TouchableOpacity>
-      </View>
-
-      <View style={styles.inputSection}>
-       <Text style={styles.label}>Trip Details</Text>
-       <Pressable onPress={() => setShowPicker(true)} disabled={isEditMode} >
-        <View style={styles.input} pointerEvents="none">
-         <TextInput style={styles.inputText} value={`Arrival: ${date.toLocaleDateString()}`} editable={false} />
-        </View>
-       </Pressable>
-
-       <View style={styles.spaceInputContainer}>
+       <Text style={styles.label}>From <Text style={{color: COLORS.error}}>*</Text></Text>
+       <View style={[styles.inputContainer, (hasAttemptedSubmit && !origin) && styles.errorBorder]}>
+        <Ionicons name="airplane-outline" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
         <TextInput
-         style={[styles.input, styles.spaceValueInput]}
-         placeholder="Available Space (e.g., 5)"
-         placeholderTextColor={COLORS.grey}
-         value={availableSpaceValue}
-         onChangeText={setAvailableSpaceValue}
-         keyboardType="numeric"
+         placeholder="Origin city"
+         placeholderTextColor={COLORS.placeholder}
+         value={originQuery}
+         onChangeText={(text) => handleSearchChange(text, 'origin')}
+         style={styles.inputText}
+         onFocus={() => { setSuggestions([]); setActiveSuggestionType('origin'); }}
+         onBlur={() => handleCityInputBlur('origin')}
+         editable={!isEditMode}
         />
+       </View>
+       {activeSuggestionType === 'origin' && suggestions.length > 0 && (
+         <View style={styles.suggestionsContainer}>
+           {suggestions.map((item) => (
+             <TouchableOpacity key={item.name + item.countryCode} style={styles.suggestionItem} onPress={() => onSelectCity(item, 'origin')}>
+               <Text style={styles.suggestionText}>{getFlagEmoji(item.countryCode)} {item.name}, {item.country}</Text>
+             </TouchableOpacity>
+           ))}
+         </View>
+       )}
+      </View>
+
+      <View style={styles.inputSection}>
+       <Text style={styles.label}>To <Text style={{color: COLORS.error}}>*</Text></Text>
+       <View style={[styles.inputContainer, (hasAttemptedSubmit && !destination) && styles.errorBorder]}>
+        <Ionicons name="airplane-outline" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
+        <TextInput
+         placeholder="Destination city"
+         placeholderTextColor={COLORS.placeholder}
+         value={destinationQuery}
+         onChangeText={(text) => handleSearchChange(text, 'destination')}
+         style={styles.inputText}
+         onFocus={() => { setSuggestions([]); setActiveSuggestionType('destination'); }}
+         onBlur={() => handleCityInputBlur('destination')}
+         editable={!isEditMode}
+        />
+       </View>
+       {activeSuggestionType === 'destination' && suggestions.length > 0 && (
+         <View style={styles.suggestionsContainer}>
+           {suggestions.map((item) => (
+             <TouchableOpacity key={item.name + item.countryCode} style={styles.suggestionItem} onPress={() => onSelectCity(item, 'destination')}>
+               <Text style={styles.suggestionText}>{getFlagEmoji(item.countryCode)} {item.name}, {item.country}</Text>
+             </TouchableOpacity>
+           ))}
+         </View>
+       )}
+      </View>
+      
+      <View style={styles.inputGroup}>
+       <View style={styles.inputSectionHalf}>
+        <Text style={styles.label}>Arrival Date <Text style={{color: COLORS.error}}>*</Text></Text>
+        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.inputContainer} disabled={isEditMode}>
+         <Ionicons name="calendar-outline" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
+         <Text style={styles.inputText}>{date.toLocaleDateString()}</Text>
+        </TouchableOpacity>
+       </View>
+       <View style={styles.inputSectionHalf}>
+        <Text style={styles.label}>Airline</Text>
+        <TouchableOpacity onPress={() => setAirlineModalVisible(true)} style={styles.inputContainer}>
+         <Ionicons name="paper-plane-outline" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
+         <Text style={airline ? styles.inputText : styles.placeholderText} numberOfLines={1}>
+          {airline?.name ?? 'Select'}
+         </Text>
+        </TouchableOpacity>
+       </View>
+      </View>
+
+      <View style={styles.inputSection}>
+       <Text style={styles.label}>Available Space <Text style={{color: COLORS.error}}>*</Text></Text>
+       <View style={styles.spaceInputRow}>
+        <View style={[styles.inputContainer, {flex: 1}, (hasAttemptedSubmit && !availableSpaceValue) && styles.errorBorder]}>
+         <Ionicons name="cube-outline" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
+         <TextInput
+          style={styles.spaceValueInput}
+          placeholder="e.g., 5"
+          placeholderTextColor={COLORS.placeholder}
+          value={availableSpaceValue}
+          onChangeText={setAvailableSpaceValue}
+          keyboardType="numeric"
+         />
+        </View>
         <View style={styles.unitSelector}>
-         <TouchableOpacity
-          style={[styles.unitButton, availableSpaceUnit === 'gr' && styles.unitButtonSelected]}
-          onPress={() => setAvailableSpaceUnit('gr')}>
+         <TouchableOpacity style={[styles.unitButton, availableSpaceUnit === 'gr' && styles.unitButtonSelected]} onPress={() => setAvailableSpaceUnit('gr')}>
           <Text style={styles.unitButtonText}>gr</Text>
          </TouchableOpacity>
-         <TouchableOpacity
-          style={[styles.unitButton, availableSpaceUnit === 'kg' && styles.unitButtonSelected]}
-          onPress={() => setAvailableSpaceUnit('kg')}>
+         <TouchableOpacity style={[styles.unitButton, availableSpaceUnit === 'kg' && styles.unitButtonSelected]} onPress={() => setAvailableSpaceUnit('kg')}>
           <Text style={styles.unitButtonText}>kg</Text>
          </TouchableOpacity>
         </View>
        </View>
       </View>
-
+      
       <View style={styles.inputSection}>
-       <Text style={styles.label}>Accepted Item Types</Text>
-       <TouchableOpacity style={styles.input} onPress={() => setItemDropdownOpen(true)}>
-        <Text style={acceptedItemTypes.length > 0 ? styles.inputText : styles.placeholderText}>
-         {acceptedItemTypes.length > 0 ? acceptedItemTypes.join(', ') : 'Select item types'}
-        </Text>
-       </TouchableOpacity>
+        <Text style={styles.label}>Accepted Item Types</Text>
+        <TouchableOpacity onPress={() => setItemModalVisible(true)} style={styles.inputContainer}>
+          <Ionicons name="file-tray-stacked-outline" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
+          <Text style={acceptedItemTypes.length > 0 ? styles.inputText : styles.placeholderText} numberOfLines={1}>
+           {acceptedItemTypes.length > 0 ? acceptedItemTypes.join(', ') : 'Select item types'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.inputSection}>
-       <Text style={styles.label}>Caption / Description</Text>
+       <Text style={styles.label}>Caption / Description (Optional)</Text>
        <TextInput
         style={styles.captionInput}
-        placeholder="Add more details..."
-        placeholderTextColor={COLORS.grey}
-        multiline
-        value={caption}
-        onChangeText={setCaption}
+        placeholder="Add more details about your trip..."
+        placeholderTextColor={COLORS.placeholder}
+        multiline value={caption} onChangeText={setCaption}
        />
       </View>
+      
+      <TouchableOpacity
+        style={[styles.bottomSubmitButton, (!isFormComplete || isSubmitting) && styles.shareButtonDisabled]}
+        disabled={!isFormComplete || isSubmitting}
+        onPress={handleSubmit}>
+        {isSubmitting ? <ActivityIndicator size="small" color={COLORS.text} /> : <Text style={styles.shareButtonText}>{submitButtonText}</Text>}
+      </TouchableOpacity>
+
      </View>
     </ScrollView>
-   </View>
+   
+   {showDatePicker && (
+    <DateTimePicker
+        mode="date"
+        display="default"
+        value={date}
+        onChange={onDateChange}
+        minimumDate={new Date()}
+    />
+   )}
+   
+   <Modal animationType="fade" transparent={true} visible={itemModalVisible} onRequestClose={() => setItemModalVisible(false)}>
+    <Pressable style={styles.modalBackdrop} onPress={() => setItemModalVisible(false)}>
+     <Pressable style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Select Item Types</Text>
+      {itemTypes.map(item => (
+       <TouchableOpacity key={item}
+        style={[styles.dropdownItem, acceptedItemTypes.includes(item) && styles.dropdownItemSelected]}
+        onPress={() => setAcceptedItemTypes(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])}>
+        <Text style={styles.suggestionText}>{item}</Text>
+       </TouchableOpacity>
+      ))}
+     </Pressable>
+    </Pressable>
+   </Modal>
+   
+   <Modal animationType="fade" transparent={true} visible={airlineModalVisible} onRequestClose={() => setAirlineModalVisible(false)}>
+    <Pressable style={styles.modalBackdrop} onPress={() => setAirlineModalVisible(false)}>
+     <Pressable style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Select Airline</Text>
+      {airlines.map(item => (
+       <TouchableOpacity key={item.code}
+        style={[styles.dropdownItem, airline?.code === item.code && styles.dropdownItemSelected]}
+        onPress={() => { setAirline(item); setAirlineModalVisible(false); }}>
+        <Text style={styles.suggestionText}>{item.name}</Text>
+       </TouchableOpacity>
+      ))}
+     </Pressable>
+    </Pressable>
+   </Modal>
 
-   {/* --- MODALS (Unchanged) --- */}
-   {showPicker && (<DateTimePicker mode="date" display="spinner" value={date} onChange={onDateChange} minimumDate={new Date()} />)}
-   <Modal animationType="slide" transparent={true} visible={isSuggestionModalVisible} onRequestClose={() => setSuggestionModalVisible(false)}>
-    <View style={styles.modalContainer}><View style={styles.modalContent}><Text style={styles.modalTitle}>Select {suggestionType === 'origin' ? 'Origin' : 'Destination'} City</Text><TextInput style={styles.searchInput} placeholder="Start typing a city name..." placeholderTextColor={COLORS.grey} value={searchQuery} onChangeText={handleSearchChange} autoFocus={true} /><ScrollView keyboardShouldPersistTaps="always">{suggestions.map(city => (<TouchableOpacity key={`${city.name}-${city.countryCode}`} style={styles.dropdownItem} onPress={() => onSelectCity(city)}><Text style={styles.suggestionText}>{getFlagEmoji(city.countryCode)} {city.name}, {city.country}</Text></TouchableOpacity>))}</ScrollView><TouchableOpacity style={styles.closeButton} onPress={() => setSuggestionModalVisible(false)}><Text style={styles.closeButtonText}>Close</Text></TouchableOpacity></View></View>
-   </Modal>
-   <Modal animationType="fade" transparent={true} visible={itemDropdownOpen} onRequestClose={() => setItemDropdownOpen(false)}>
-    <Pressable style={styles.modalContainer} onPress={() => setItemDropdownOpen(false)}><View style={styles.modalContent}><Text style={styles.modalTitle}>Select Item Types</Text>{itemTypes.map(item => (<TouchableOpacity key={item} style={[styles.dropdownItem, acceptedItemTypes.includes(item) && styles.dropdownItemSelected]} onPress={() => setAcceptedItemTypes(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])}><Text style={styles.suggestionText}>{item}</Text></TouchableOpacity>))}</View></Pressable>
-   </Modal>
   </KeyboardAvoidingView>
  );
 }
 
-// Styles (unchanged from your original file)
 const styles = StyleSheet.create({
- container: { flex: 1, backgroundColor: COLORS.dark },
- contentContainer: { flex: 1, paddingTop: Platform.OS === 'ios' ? 50 : 20 },
- header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 15, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
- headerTitle: { color: COLORS.white, fontSize: 18, fontWeight: 'bold' },
- shareButton: { backgroundColor: COLORS.primary, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8 },
+ container: { flex: 1, backgroundColor: COLORS.background, paddingTop: Platform.OS === 'ios' ? 50 : 20 },
+ header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: COLORS.separator },
+ headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '600' },
+ shareButton: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
  shareButtonDisabled: { backgroundColor: COLORS.disabled },
- shareButtonText: { color: COLORS.white, fontWeight: 'bold' },
- scrollContent: { paddingBottom: 50, paddingHorizontal: 20 },
- content: {},
+ shareButtonText: { color: COLORS.text, fontWeight: 'bold', fontSize: 16 },
+ scrollContent: { padding: 20, paddingBottom: 40 },
  contentDisabled: { opacity: 0.5 },
- inputSection: { marginBottom: 25, paddingTop: 16 },
- label: { color: COLORS.white, fontSize: 16, fontWeight: '600', marginBottom: 10 },
- input: { backgroundColor: '#2C2C2E', justifyContent: 'center', height: 50, paddingHorizontal: 15, borderRadius: 10, marginBottom: 10 },
- inputText: { color: COLORS.white, fontSize: 16 },
- placeholderText: { color: COLORS.grey, fontSize: 16 },
- spaceInputContainer: { flexDirection: 'row', alignItems: 'center' },
- spaceValueInput: { flex: 1, marginRight: 10 },
- unitSelector: { flexDirection: 'row', backgroundColor: '#2C2C2E', borderRadius: 10 },
- unitButton: { paddingVertical: 15, paddingHorizontal: 20 },
- unitButtonSelected: { backgroundColor: COLORS.primary, borderRadius: 10 },
- unitButtonText: { color: COLORS.white, fontWeight: 'bold' },
- captionInput: { backgroundColor: '#2C2C2E', color: COLORS.white, padding: 15, borderRadius: 10, fontSize: 16, minHeight: 120, textAlignVertical: 'top' },
- modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)' },
- modalContent: { backgroundColor: COLORS.dark, borderRadius: 10, padding: 20, width: '90%', maxHeight: '80%' },
- modalTitle: { color: COLORS.white, fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
- searchInput: { backgroundColor: '#2C2C2E', color: COLORS.white, padding: 12, borderRadius: 10, fontSize: 16, marginBottom: 15 },
- dropdownItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey },
- dropdownItemSelected: { backgroundColor: COLORS.primary, borderRadius: 5 },
- suggestionText: { color: COLORS.white, fontSize: 16 },
- closeButton: { backgroundColor: COLORS.primary, padding: 15, borderRadius: 10, marginTop: 15 },
- closeButtonText: { color: COLORS.white, fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
+ inputGroup: { flexDirection: 'row', justifyContent: 'space-between', gap: 16 },
+ inputSection: { marginBottom: 24, zIndex: 10 },
+ inputSectionHalf: { flex: 1, marginBottom: 24 },
+ label: { color: COLORS.textSecondary, fontSize: 15, fontWeight: '500', marginBottom: 8, paddingLeft: 4 },
+ inputContainer: { backgroundColor: COLORS.contentBackground, flexDirection: 'row', alignItems: 'center', height: 52, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.separator },
+ errorBorder: { borderColor: COLORS.error, borderWidth: 1 }, // New style for error border
+ inputIcon: { marginRight: 10 },
+ inputText: { color: COLORS.text, fontSize: 16, flex: 1 },
+ placeholderText: { color: COLORS.placeholder, fontSize: 16, flex: 1 },
+ suggestionsContainer: {
+    backgroundColor: COLORS.contentBackground,
+    borderRadius: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: COLORS.separator,
+ },
+ suggestionItem: { padding: 14, borderBottomWidth: 1, borderBottomColor: COLORS.separator },
+ suggestionText: { color: COLORS.text, fontSize: 16 },
+ spaceInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+ spaceValueInput: { color: COLORS.text, fontSize: 16, flex: 1, height: '100%' },
+ unitSelector: { flexDirection: 'row', backgroundColor: COLORS.contentBackground, borderRadius: 12, borderWidth: 1, borderColor: COLORS.separator },
+ unitButton: { paddingVertical: 15, paddingHorizontal: 22 },
+ unitButtonSelected: { backgroundColor: COLORS.primary, borderRadius: 11 },
+ unitButtonText: { color: COLORS.text, fontWeight: '600', fontSize: 16 },
+ captionInput: { backgroundColor: COLORS.contentBackground, color: COLORS.text, padding: 15, borderRadius: 12, fontSize: 16, minHeight: 120, textAlignVertical: 'top', borderWidth: 1, borderColor: COLORS.separator },
+ bottomSubmitButton: { backgroundColor: COLORS.primary, height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+ modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' },
+ modalContent: { backgroundColor: '#2C2C2E', borderRadius: 14, padding: 16, width: '90%', maxHeight: '80%', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 },
+ modalTitle: { color: COLORS.text, fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
+ dropdownItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.separator },
+ dropdownItemSelected: { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 12, marginHorizontal: -12, paddingVertical: 14 },
 });
