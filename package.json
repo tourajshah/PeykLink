@@ -41,7 +41,8 @@
     "react-native-screens": "~4.16.0",
     "react-native-web": "^0.21.0",
     "react-native-webview": "13.15.0",
-    "svix": "^1.76.1"
+    "svix": "^1.76.1",
+    "expo-linear-gradient": "~15.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

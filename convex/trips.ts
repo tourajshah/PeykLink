@@ -23,6 +23,7 @@ export const createTrip = mutation({
         availableSpace: v.string(),
         description: v.optional(v.string()),
         acceptedItemTypes: v.optional(v.string()),
+        airline: v.optional(v.string()),
     },
 
     handler: async (ctx,args) => {
@@ -42,6 +43,7 @@ export const createTrip = mutation({
             status: "active",
             description: args.description,
             acceptedItemTypes: args.acceptedItemTypes,
+            airline: args.airline,
 
         });
         
@@ -165,6 +167,7 @@ export const updateTrip = mutation({
     availableSpace: v.string(),
     description: v.optional(v.string()),
     acceptedItemTypes: v.optional(v.string()),
+    airline: v.optional(v.string()),
 
   },
   handler: async (ctx, args) => {
@@ -185,6 +188,7 @@ export const updateTrip = mutation({
       availableSpace?: string,
       description?: string,
       acceptedItemTypes?: string,
+      airline?:string,
     } = {}
 
     if(args.availableSpace !== undefined) updates.availableSpace = args.availableSpace

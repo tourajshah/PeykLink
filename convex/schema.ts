@@ -44,6 +44,7 @@ export default defineSchema({
         status: v.string(),
         description: v.optional(v.string()),
         acceptedItemTypes: v.optional(v.string()),
+        airline: v.optional(v.string()),
 
     }).index("by_travelerId", ["travelerId"]),
 
