@@ -26,6 +26,8 @@ export const createRequest = mutation({
         requiredByDate: v.string(),
         description: v.optional(v.string()),
         itemTypes: v.optional(v.string()),
+        visibility: v.union(v.literal("public"), v.literal("direct")),
+        targetedTravelerId: v.optional(v.id("users"))
     },
 
     handler: async (ctx,args) => {
@@ -50,7 +52,8 @@ export const createRequest = mutation({
             status: "active",
             description: args.description,
             itemTypes: args.itemTypes,
-
+            visibility: args.visibility,
+            targetedTravelerId: args.targetedTravelerId
         });
         
         return requestId;
@@ -65,7 +68,11 @@ export const getFeedRequests = query ({
 
         // get all requests form db
 
-        const requests = await ctx.db.query("requests").order("desc").collect()
+        const requests = await ctx.db
+          .query("requests")
+          .filter((q) => q.eq(q.field("visibility"), "public"))
+          .order("desc")
+          .collect()
 
         if(requests.length === 0) return []
 
@@ -208,3 +215,65 @@ export const updateRequest = mutation({
 })
 
 
+export const createDirectRequestAndOffer = mutation({
+    // We need all the request arguments, PLUS the tripId for the offer
+    args: {
+        // same args from createRequest
+        productName: v.string(),
+        productURL: v.optional(v.string()),
+        productWeight: v.optional(v.string()),
+        quantity: v.number(),
+        itemPrice: v.number(),
+        travelerFee: v.number(),
+        originCountry: v.string(),
+        originCity: v.optional(v.string()),
+        destinationCountry: v.string(),
+        destinationCity: v.optional(v.string()),
+        requiredByDate: v.string(),
+        description: v.optional(v.string()),
+        itemTypes: v.optional(v.string()),
+        
+        visibility: v.literal("direct"), // This will always be "direct"
+        targetedTravelerId: v.id("users"), // This is now required, not optional
+
+        // The new required field for creating the offer
+        tripId: v.id("trips"),
+    },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+
+        // --- PART 1: Create the Direct Request ---
+        const requestId = await ctx.db.insert("requests", {
+            requesterId: currentUser._id,
+            productName: args.productName,
+            productURL: args.productURL,
+            productWeight: args.productWeight,
+            quantity: args.quantity,
+            itemPrice: args.itemPrice,
+            travelerFee: args.travelerFee,
+            originCountry: args.originCountry,
+            originCity: args.originCity,
+            destinationCountry: args.destinationCountry,
+            destinationCity: args.destinationCity,
+            requiredByDate: args.requiredByDate,
+            status: "active", // "negotiating" status
+            description: args.description,
+            itemTypes: args.itemTypes,
+            visibility: "direct",
+            targetedTravelerId: args.targetedTravelerId,
+        });
+
+        // --- PART 2: Create the Initial Offer ---
+        await ctx.db.insert("offers", {
+            requestId: requestId,
+            tripId: args.tripId,
+            requesterId: currentUser._id,
+            travelerId: args.targetedTravelerId,
+            proposedFee: args.travelerFee, // The initial offer uses the fee from the form
+            status: "pending",
+        });
+
+        // Return the new requestId so we can navigate if needed
+        return requestId;
+    },
+});

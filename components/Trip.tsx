@@ -74,6 +74,25 @@ export default function Trip({trip}: TripProps) {
         }
     }
 
+
+    const handleSendOffer = async () => {
+        try {
+            router.push({
+                pathname:'/(stack)/orders',
+                params: {
+                    travelerId: trip.traveler._id,
+                    tripId: trip._id
+                }
+            })
+        } catch (error) {
+            alert("Error sending offer")
+        }
+    }
+
+    function MapsTo(arg0: string, arg1: { travelerId: string; tripId: string; }): ((event: import("react-native").GestureResponderEvent) => void) | undefined {
+        throw new Error('Function not implemented.');
+    }
+
   return (
     <View style={styles.post}>
 
@@ -174,11 +193,13 @@ export default function Trip({trip}: TripProps) {
             )}
 
             <View style={styles.postActions}>
-                <TouchableOpacity style={styles.tabContainer} onPress={() => alert('clicked')}>
-                    <Text style={[styles.tabText, styles.tabContainer]}>Send Offer</Text>
-                </TouchableOpacity>
+                {/* Only show the "Request Delivery" button if the current user is NOT the traveler */}
+                {trip.traveler._id !== currentUser?._id && (
+                    <TouchableOpacity style={styles.tabContainer} onPress={handleSendOffer}>
+                        <Text style={[styles.tabText, styles.tabContainer]}>Request Delivery</Text>
+                    </TouchableOpacity>
+                )}  
             </View>
-    
     </View>
   )
 }

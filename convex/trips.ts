@@ -201,4 +201,26 @@ export const updateTrip = mutation({
   },
 })
 
+export const getTripById = query({
+    args: {
+        tripId: v.id("trips"),
+    },
+    handler: async (ctx, args) => {
+        const trip = await ctx.db.get(args.tripId);
 
+        if (!trip) {
+            return null;
+        }
+
+        const traveler = await ctx.db.get(trip.travelerId);
+
+        return {
+            ...trip,
+            traveler: {
+                _id: traveler?._id,
+                username: traveler?.username,
+                image: traveler?.imageURL,
+            }
+        };
+    },
+});

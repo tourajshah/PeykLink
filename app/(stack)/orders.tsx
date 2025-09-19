@@ -1,27 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import { City, cityData } from '@/constants/cityData';
 import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 const COLORS = {
     primary: '#0A84FF',
@@ -51,8 +53,32 @@ const FormSeparator = () => <View style={styles.separator} />;
 export default function RequestsScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+
+    const { travelerId, tripId } = params; 
+
+    // check if request is direct mode
+        
+    const isDirectMode = !!travelerId;
+    const visibility = isDirectMode ? "direct" : "public";
+    const targetedTravelerId = isDirectMode ? travelerId as Id<"users"> : undefined;
+    const targetedTripId = isDirectMode ? tripId as Id<"trips"> : undefined;
+
+    // GET TRIP DATA BY TRIP ID
+
+    const tripData = useQuery(
+        api.trips.getTripById,
+        isDirectMode && targetedTripId ? { tripId: targetedTripId } : "skip"
+    );
+
+
     const existingRequest = useMemo(() => params.request ? JSON.parse(params.request as string) : null, [params.request]);
     const isEditMode = existingRequest !== null;
+    
+
+    const createDirectRequestAndOffer = useMutation(api.requests.createDirectRequestAndOffer);
+    const createRequest = useMutation(api.requests.createRequest);
+    const updateRequest = useMutation(api.requests.updateRequest);
+
 
     // --- Form State ---
     const [productName, setProductName] = useState('');
@@ -105,8 +131,43 @@ export default function RequestsScreen() {
         }
     }, [isEditMode, existingRequest]);
 
-    const createRequest = useMutation(api.requests.createRequest);
-    const updateRequest = useMutation(api.requests.updateRequest);
+    useEffect(() => {
+        // If we are in direct mode and the tripData has loaded
+        if (isDirectMode && tripData) {
+                // Create City objects that match the structure of your state
+            const originCity: City = {
+                name: tripData.originCity,
+                country: tripData.originCountry,
+                // You might need to find the country code from your cityData array
+                // For now, we can leave it blank or implement a lookup
+                countryCode: '', 
+            };
+            const destinationCity: City = {
+                name: tripData.destinationCity,
+                country: tripData.destinationCountry,
+                countryCode: '',
+            };
+
+            // Update the form state with the trip's data
+            setOrigin(originCity);
+            setDestination(destinationCity);
+            setRequiredByDate(new Date(tripData.arrivalDate));
+            
+            // Also update the query text shown in the TextInput fields
+            setOriginQuery(`${originCity.name}, ${originCity.country}`);
+            setDestinationQuery(`${destinationCity.name}, ${destinationCity.country}`);
+        }
+    }, [isDirectMode, tripData]); // This effect runs when these values change
+
+    if (isDirectMode && !tripData) {
+    return (
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background}}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={{color: COLORS.text, marginTop: 10}}>Loading Trip Details...</Text>
+        </View>
+        )
+    }
+
 
     // Generic handler to validate a field on blur
     const handleBlur = (field: string, value: any, message: string) => {
@@ -159,6 +220,7 @@ export default function RequestsScreen() {
         const isFormValid = validateForm();
         if (!isEditMode && !isFormValid) { return; }
 
+
         setIsSubmitting(true);
         try {
             if (isEditMode) {
@@ -172,25 +234,53 @@ export default function RequestsScreen() {
                 });
                 Alert.alert('Success!', 'Your request has been updated.');
             } else {
-                await createRequest({
-                    productName,
-                    productURL,
-                    quantity: parseInt(quantity, 10),
-                    itemPrice: parseFloat(itemPrice),
-                    travelerFee: parseFloat(travelerFee),
-                    originCountry: origin!.country,
-                    originCity: origin!.name,
-                    // originCountryCode: origin!.countryCode,
-                    destinationCountry: destination!.country,
-                    destinationCity: destination!.name,
-                    // destinationCountryCode: destination!.countryCode,
-                    requiredByDate: requiredByDate.toISOString().split('T')[0],
-                    productWeight: `${productWeight} ${weightUnit}`,
-                    itemTypes: selectedItemTypes.join(', '),
-                    description,
-                });
-                Alert.alert('Success!', 'Your request has been posted.');
+                if (isDirectMode) {
+                    // We are creating a DIRECT request and an initial OFFER
+                    await createDirectRequestAndOffer({
+                        // Pass all the same request fields...
+                        productName,
+                        productURL,
+                        quantity: parseInt(quantity, 10),
+                        itemPrice: parseFloat(itemPrice),
+                        travelerFee: parseFloat(travelerFee),
+                        originCountry: origin!.country,
+                        originCity: origin!.name,
+                        destinationCountry: destination!.country,
+                        destinationCity: destination!.name,
+                        requiredByDate: requiredByDate.toISOString().split('T')[0],
+                        productWeight: `${productWeight} ${weightUnit}`,
+                        itemTypes: selectedItemTypes.join(', '),
+                        description,
+                        visibility: "direct",
+                        targetedTravelerId: targetedTravelerId!, // We know this exists in direct mode
+                        
+                        // ...and also pass the required tripId
+                        tripId: targetedTripId!, // We know this exists in direct mode
+                    });
+                    Alert.alert('Success!', 'Your direct offer has been sent.');
+                } else {
+                    // We are creating a PUBLIC request
+                    await createRequest({
+                        productName,
+                        productURL,
+                        quantity: parseInt(quantity, 10),
+                        itemPrice: parseFloat(itemPrice),
+                        travelerFee: parseFloat(travelerFee),
+                        originCountry: origin!.country,
+                        originCity: origin!.name,
+                        destinationCountry: destination!.country,
+                        destinationCity: destination!.name,
+                        requiredByDate: requiredByDate.toISOString().split('T')[0],
+                        productWeight: `${productWeight} ${weightUnit}`,
+                        itemTypes: selectedItemTypes.join(', '),
+                        description,
+                        visibility: "public",
+                        targetedTravelerId: undefined,
+                    });
+                    Alert.alert('Success!', 'Your request has been posted.');
+                }
             }
+            // After success, navigate back or to the new offers tab
             router.back();
         } catch (error) {
             console.error('Failed to submit request:', error);
@@ -212,8 +302,9 @@ export default function RequestsScreen() {
     };
 
     const isFormComplete = productName && itemPrice && travelerFee && origin && destination;
-    const headerTitle = isEditMode ? 'Edit Request' : 'New Request';
-    const submitButtonText = isEditMode ? 'Save Changes' : 'Post Request';
+    const headerTitle = isEditMode ? 'Edit Request' : isDirectMode ? 'Direct Request' : 'New Request';
+    const submitButtonText = isEditMode ? 'Save Changes' : isDirectMode ? 'Send Request' : 'Post Request';
+
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
@@ -226,6 +317,18 @@ export default function RequestsScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+
+                {/* SHOW DETAIL OF THE TRIP OWNER IF IT IS DIRECT REQUEST*/}
+
+                {isDirectMode && tripData?.traveler && (
+                <View style={styles.travelerInfoCard}>
+                    <Image source={tripData.traveler.image } style={styles.travelerAvatar} />
+                    <View>
+                        <Text style={styles.travelerInfoLabel}>SENDING REQUEST TO:</Text>
+                        <Text style={styles.travelerInfoName}>{tripData.traveler.username}</Text>
+                    </View>
+                </View>
+                )}
                 <View style={[styles.content, isSubmitting && styles.contentDisabled]}>
 
                     <View style={styles.inputSection}>
@@ -234,7 +337,7 @@ export default function RequestsScreen() {
                             <Text style={styles.subLabel}>Origin <Text style={styles.asterisk}>*</Text></Text>
                             <View style={[styles.inputContainer, !!errors.origin && styles.errorBorder]}>
                                 <MaterialCommunityIcons name="airplane-takeoff" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
-                                <TextInput style={styles.inputText} placeholder="Select origin city" placeholderTextColor={COLORS.placeholder} value={originQuery} onChangeText={(text) => handleSearchChange(text, 'origin')} onFocus={() => setActiveSuggestionType('origin')} onBlur={() => handleBlur('origin', origin, 'Please select a valid origin city.')} editable={!isEditMode} />
+                                <TextInput style={styles.inputText} placeholder="Select origin city" placeholderTextColor={COLORS.placeholder} value={originQuery} onChangeText={(text) => handleSearchChange(text, 'origin')} onFocus={() => setActiveSuggestionType('origin')} onBlur={() => handleBlur('origin', origin, 'Please select a valid origin city.')} editable={!isEditMode && !isDirectMode} />
                             </View>
                             {errors.origin && <Text style={styles.errorText}>{errors.origin}</Text>}
                             {activeSuggestionType === 'origin' && suggestions.length > 0 && (
@@ -245,7 +348,7 @@ export default function RequestsScreen() {
                             <Text style={styles.subLabel}>Destination <Text style={styles.asterisk}>*</Text></Text>
                             <View style={[styles.inputContainer, !!errors.destination && styles.errorBorder]}>
                                 <MaterialCommunityIcons name="airplane-landing" size={22} color={COLORS.textSecondary} style={styles.inputIcon} />
-                                <TextInput style={styles.inputText} placeholder="Select destination city" placeholderTextColor={COLORS.placeholder} value={destinationQuery} onChangeText={(text) => handleSearchChange(text, 'destination')} onFocus={() => setActiveSuggestionType('destination')} onBlur={() => handleBlur('destination', destination, 'Please select a valid destination city.')} editable={!isEditMode} />
+                                <TextInput style={styles.inputText} placeholder="Select destination city" placeholderTextColor={COLORS.placeholder} value={destinationQuery} onChangeText={(text) => handleSearchChange(text, 'destination')} onFocus={() => setActiveSuggestionType('destination')} onBlur={() => handleBlur('destination', destination, 'Please select a valid destination city.')} editable={!isEditMode && !isDirectMode} />
                             </View>
                             {errors.destination && <Text style={styles.errorText}>{errors.destination}</Text>}
                             {activeSuggestionType === 'destination' && suggestions.length > 0 && (
@@ -339,7 +442,7 @@ export default function RequestsScreen() {
                 </View>
             </ScrollView>
 
-            {showPicker && (<DateTimePicker mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} value={requiredByDate} onChange={onDateChange} minimumDate={new Date()} themeVariant="dark" />)}
+            {showPicker && (<DateTimePicker mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} value={requiredByDate} onChange={onDateChange} minimumDate={new Date()} maximumDate={isDirectMode && tripData ? new Date(tripData.arrivalDate) : undefined} themeVariant="dark" />)}
 
             <Modal animationType="fade" transparent={true} visible={itemTypeModalOpen} onRequestClose={() => setItemTypeModalOpen(false)}>
                 <Pressable style={styles.modalBackdrop} onPress={() => setItemTypeModalOpen(false)}>
@@ -395,4 +498,28 @@ const styles = StyleSheet.create({
     modalTitle: { color: COLORS.text, fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
     dropdownItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.separator, justifyContent: 'space-between' },
     dropdownItemText: { color: COLORS.text, fontSize: 16, marginLeft: 12, flex: 1 },
+    travelerInfoCard: {
+        backgroundColor: COLORS.contentBackground,
+        borderRadius: 12,
+        padding: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    travelerAvatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        marginRight: 12,
+    },
+    travelerInfoLabel: {
+        color: COLORS.textSecondary,
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    travelerInfoName: {
+        color: COLORS.text,
+        fontSize: 16,
+        fontWeight: '600',
+    },
 });
