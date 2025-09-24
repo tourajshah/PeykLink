@@ -7,7 +7,8 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import { useMutation, useQuery } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 
 const COLORS = {
@@ -26,8 +27,8 @@ type RequestProps = {
         description?: string;
         productURL?: string;
         productWeight?: string;
-        originCity?: string;
-        destinationCity?: string;
+        originCity: string;
+        destinationCity: string;
         itemTypes?: string;
         requiredByDate: string;
         itemPrice: number;
@@ -80,6 +81,33 @@ export default function Request({request}: RequestProps) {
 
     const currentUser = useQuery(api.users.getUserByClerkId, user ? {clerkId: user?.id} : "skip")
 
+    const isPotentialTraveler = currentUser && currentUser._id !== request.requester._id;
+
+    const createInitialOffer = useMutation(api.offers.createInitialOffer);
+
+    // BOOL ANSWER : HAS MATCHING TRIPS ? YES OR NO 
+
+    // const hasMatchingTrip = useQuery(
+    //     api.users.checkUserHasMatchingTrip,
+    //     isPotentialTraveler ? {
+    //         originCountry: request.originCountry,
+    //         destinationCountry: request.destinationCountry,
+    //     } : "skip"
+    // );
+
+    // GET ALL ARRAY OF THE MATCHING TRIPS
+
+    const myMatchingTrips = useQuery(
+        api.trips.getMyMatchingTrips,
+        isPotentialTraveler ? {
+            originCity: request.originCity,
+            destinationCity: request.destinationCity,
+        } : "skip"
+    );
+    
+    const isLoadingTrips = myMatchingTrips === undefined;
+
+
     const deleteRequest = useMutation(api.requests.deleteRequest)
 
     const handleDeleteRequest = async () => {
@@ -89,6 +117,68 @@ export default function Request({request}: RequestProps) {
             alert("Error deleting the request")
         }
     }
+
+
+    console.log(`[Request Card: ${request.productName}] Matching Trips Data:`, myMatchingTrips);
+
+
+    const [isOfferModalVisible, setOfferModalVisible] = useState(false);
+    const [proposedFee, setProposedFee] = useState(request.travelerFee.toFixed(2));
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+
+    const handleOpenOfferModal = () => {
+        console.log(`[${request.productName}] handleOpenOfferModal triggered.`);
+        if (!myMatchingTrips || myMatchingTrips.length === 0) {
+            console.log(`[${request.productName}] Check failed: No trips. Alerting user.`);
+            Alert.alert(
+                "No Matching Trip",
+                "You must have a trip registered from " + request.originCity + " to " + request.destinationCity + " to make an offer."
+            );
+            return;
+        }
+        console.log(`[${request.productName}] Check passed. Opening modal.`);
+        setOfferModalVisible(true);
+    };
+
+    // This new function handles the logic of submitting the offer from the modal.
+    const handleSubmitOffer = async () => {
+        setIsSubmitting(true);
+        const fee = parseFloat(proposedFee);
+        if (isNaN(fee) || fee <= 0) {
+            Alert.alert("Invalid Fee", "Please enter a valid amount.");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!myMatchingTrips || myMatchingTrips.length === 0) {
+            Alert.alert("Error", "Could not find a matching trip to submit.");
+            setIsSubmitting(false);
+            return;
+        }
+        
+        const tripIdforOffer = myMatchingTrips[0]._id;
+
+        try {
+            const returnedRequestId = await createInitialOffer({
+                requestId: request._id,
+                tripId: tripIdforOffer,
+                proposedFee: fee,
+            });
+
+            setOfferModalVisible(false);
+            router.push({
+                pathname: '/(stack)/offers',
+                params: { id: returnedRequestId }
+            });
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Error", (error as Error).message || "Could not send offer.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
 
   return (
@@ -212,11 +302,54 @@ export default function Request({request}: RequestProps) {
             )}
 
             <View style={styles.postActions}>
-                <TouchableOpacity style={styles.tabContainer} onPress={() => alert('clicked')}>
-                    <Text style={[styles.tabText, styles.tabContainer]}>Send Offer</Text>
-                </TouchableOpacity>
+                {/* Only show the "Request Delivery" button if the current user is NOT the traveler */}
+                {isPotentialTraveler && (
+                    <TouchableOpacity 
+                    disabled={isLoadingTrips}
+                    style={[styles.tabContainer, isLoadingTrips && styles.disabledButton]} 
+                    onPress={handleOpenOfferModal}>
+                        <Text style={[styles.tabText, styles.tabContainer]}>
+                            {isLoadingTrips ? 'Checking Trips...' : 'Offer Delivery'}
+                        </Text>
+                    </TouchableOpacity>
+                )}  
             </View>
-    
+
+            <Modal 
+                animationType='fade'
+                transparent={true}
+                visible={isOfferModalVisible}
+                onRequestClose={() => setOfferModalVisible(false)}>
+
+                <Pressable style={styles.modalBackdrop} onPress={() => setOfferModalVisible(false)}>
+                    <Pressable style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Proposed a Delivery Fee</Text>
+                        <View style={styles.modalInputContainer}>
+                            <Text style={styles.dollarSign}>$</Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder={request.travelerFee.toFixed(2)}
+                                placeholderTextColor="#636366"
+                                keyboardType="numeric"
+                                value={proposedFee}
+                                onChangeText={setProposedFee}
+                                autoFocus={true}
+                            />
+                        </View>
+                        <TouchableOpacity
+                            style={[styles.modalButton, isSubmitting && styles.disabledButton]}
+                            onPress={handleSubmitOffer}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting
+                                ? <ActivityIndicator color="#FFFFFF" />
+                                : <Text style={styles.modalButtonText}>Send Offer</Text>
+                            }
+                        </TouchableOpacity>
+                    </Pressable>
+                </Pressable>
+            </Modal>
     </View>
   )
 }
+

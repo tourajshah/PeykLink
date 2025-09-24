@@ -1,36 +1,42 @@
 import { Loader } from '@/components/Loader';
 import Request from "@/components/Request";
 import Trip from "@/components/Trip";
-import { COLORS } from '@/constants/theme';
 import { api } from '@/convex/_generated/api';
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FlatList, ListRenderItemInfo, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+// 1. A sharp, modern, monochromatic palette for a timeless "digital slate" feel
+const PALETTE = {
+  background: '#0D0D0D', // Near-black for a deep, focused background
+  surface: '#1C1C1C',    // Dark charcoal for secondary elements
+  surfaceInverted: '#FFFFFF', // Pure white for the primary "hero" elements
+  primary: '#007AFF',    // A vibrant, electric blue for key highlights
+  textPrimary: '#FFFFFF',
+  textSecondary: '#A1A1A1',
+  textOnInverted: '#0D0D0D', // Black text on white surfaces
+  border: '#333333',
+};
 
 export default function Create() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'trips' | 'requests'>('trips');
 
-  // 1. Fetch the user's own data, not the general feed
   const myTrips = useQuery(api.trips.getMyTrips);
   const myRequests = useQuery(api.requests.getMyRequests);
 
-  // Show a loader while data is being fetched for the first time
   if (myTrips === undefined || myRequests === undefined) {
     return <Loader />;
   }
 
-  // 2. Define types based on the correct query return types for type safety
   type TripType = NonNullable<typeof myTrips>[number];
   type RequestType = NonNullable<typeof myRequests>[number];
-  
+
   const isTripsActive = activeTab === 'trips';
   const dataToRender = isTripsActive ? myTrips : myRequests;
 
-  // Render function for each item in the FlatList
   const renderFeedItem = ({ item }: ListRenderItemInfo<TripType | RequestType>) => {
     if (isTripsActive) {
       return <Trip trip={item as TripType} />;
@@ -38,49 +44,54 @@ export default function Create() {
     return <Request request={item as RequestType} />;
   };
 
-  // Header component that contains everything above the list
   const ListHeader = () => (
     <>
-      <Text style={styles.header}>Create & Manage</Text>
-      <Text style={styles.subHeader}>Choose an option to create a new post or see your existing ones below.</Text>
-
-      {/* Card for creating a new trip */}
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => router.navigate("/trips")}
-      >
-        <Feather name="map-pin" size={32} color="#fff" />
-        <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>Create a Trip</Text>
-          <Text style={styles.cardDescription}>Organize and share your travel plans.</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Card for creating a new request/order */}
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => router.navigate("/orders")}
-      >
-        <Feather name="package" size={32} color="#fff" />
-        <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>Post a Request</Text>
-          <Text style={styles.cardDescription}>Request items you need from travelers.</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* 3. Tab switcher for the user's posts */}
-      <View style={styles.listHeaderContainer}>
-        <Text style={styles.listHeader}>My Active Posts</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.header}>Start Something New</Text>
+        <Text style={styles.subHeader}>Your next adventure or request begins here.</Text>
       </View>
-      <View style={styles.tabContainer}>
+      <View style={styles.separator} />
+
+      {/* 2. Inverted hierarchy cards for a powerful focal point */}
+      <View style={styles.cardsContainer}>
+        {/* The "Hero" Action Card */}
         <TouchableOpacity
-          style={[styles.tab, isTripsActive && styles.activeTab]}
+          style={[styles.card, styles.primaryCard]}
+          onPress={() => router.navigate("/trips")}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#F0F0F0' }]}>
+            <Feather name="map-pin" size={24} color={PALETTE.textOnInverted} />
+          </View>
+          <Text style={[styles.cardTitle, { color: PALETTE.textOnInverted }]}>Plan a New Trip</Text>
+          <Feather name="arrow-right" style={styles.cardArrow} color={PALETTE.textOnInverted} />
+        </TouchableOpacity>
+
+        {/* The Secondary Action Card */}
+        <TouchableOpacity
+          style={[styles.card, styles.secondaryCard]}
+          onPress={() => router.navigate("/orders")}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#2C2C2C' }]}>
+            <Feather name="package" size={24} color={PALETTE.textPrimary} />
+          </View>
+          <Text style={styles.cardTitle}>Request an Item</Text>
+          <Feather name="arrow-right" style={styles.cardArrow} color={PALETTE.textPrimary} />
+        </TouchableOpacity>
+      </View>
+      
+      <Text style={styles.listTitle}>Active Posts</Text>
+      {/* 3. Perfected, robust Segmented Control that guarantees text centering */}
+      <View style={styles.segmentedControlContainer}>
+        <TouchableOpacity 
+          style={[styles.segmentedTab, isTripsActive && styles.activeTab]} 
           onPress={() => setActiveTab('trips')}
         >
           <Text style={[styles.tabText, isTripsActive && styles.activeTabText]}>My Trips</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, !isTripsActive && styles.activeTab]}
+        <TouchableOpacity 
+          style={[styles.segmentedTab, !isTripsActive && styles.activeTab]} 
           onPress={() => setActiveTab('requests')}
         >
           <Text style={[styles.tabText, !isTripsActive && styles.activeTabText]}>My Requests</Text>
@@ -90,7 +101,6 @@ export default function Create() {
   );
 
   return (
-    // 4. Use FlatList as the main scrollable container
     <FlatList
       style={styles.container}
       data={dataToRender}
@@ -98,103 +108,78 @@ export default function Create() {
       keyExtractor={(item) => item._id}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={ListHeader}
+      ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
+          <Feather name="inbox" size={40} color={PALETTE.border} />
+          <Text style={styles.emptyTitle}>Nothing here yet</Text>
           <Text style={styles.emptyText}>
-            {`You have no active ${isTripsActive ? 'trips' : 'requests'}.`}
+            {`Your active ${isTripsActive ? 'trips' : 'requests'} will be displayed here.`}
           </Text>
         </View>
       }
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}
+      // 4. Bottom padding adjusted for a perfect fit
+      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 80 }}
     />
   );
 }
 
-// StyleSheet for all the components on this screen
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 10,
-    paddingTop: 60,
-  },
-  subHeader: {
-    fontSize: 16,
-    color: '#a0a0a0',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: PALETTE.background },
+  headerContainer: { paddingTop: 70, paddingBottom: 24 },
+  header: { fontSize: 32, fontWeight: '600', color: PALETTE.textPrimary },
+  subHeader: { fontSize: 16, color: PALETTE.textSecondary, marginTop: 8 },
+  separator: { height: 1, backgroundColor: PALETTE.border, marginBottom: 32 },
+  cardsContainer: { flexDirection: 'row', marginBottom: 48, gap: 16 },
   card: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 16,
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 20,
-    elevation: 8,
-  },
-  cardTextContainer: {
-    marginLeft: 20,
     flex: 1,
+    borderRadius: 24,
+    padding: 20,
+    minHeight: 180,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
   },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: '#a0a0a0',
-    marginTop: 4,
-  },
-  listHeaderContainer: {
-    marginTop: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
-  },
-  listHeader: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 15,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#1e1e1e',
-    borderRadius: 30,
-    marginVertical: 20,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 30,
-  },
-  activeTab: {
-    backgroundColor: COLORS.primary,
-  },
-  tabText: {
-    color: '#a0a0a0',
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: '#fff',
-  },
-  emptyContainer: {
-    height: 200, 
+  primaryCard: { backgroundColor: PALETTE.surfaceInverted },
+  secondaryCard: { backgroundColor: PALETTE.surface },
+  iconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 20,
   },
+  cardTitle: { fontSize: 18, fontWeight: '600', color: PALETTE.textPrimary },
+  cardArrow: { position: 'absolute', bottom: 20, right: 20, fontSize: 24 },
+  listTitle: { fontSize: 22, fontWeight: '600', color: PALETTE.textPrimary, marginBottom: 16, paddingHorizontal: 4 },
+  segmentedControlContainer: {
+    flexDirection: 'row',
+    backgroundColor: PALETTE.surface,
+    borderRadius: 16,
+    height: 54,
+    padding: 6,
+    marginBottom: 24,
+  },
+  segmentedTab: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  activeTab: { backgroundColor: PALETTE.background },
+  tabText: { fontSize: 15, fontWeight: '600', color: PALETTE.textSecondary },
+  activeTabText: { color: PALETTE.primary },
+  listSeparator: { height: 1, width: '100%', backgroundColor: PALETTE.border },
+  emptyContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    gap: 16,
+  },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: PALETTE.textPrimary },
   emptyText: {
     fontSize: 16,
-    color: '#a0a0a0',
+    color: PALETTE.textSecondary,
+    textAlign: 'center',
+    maxWidth: '80%',
   },
 });

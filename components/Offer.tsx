@@ -124,7 +124,7 @@ export default function OfferThreadItem({ thread }: OfferThreadItemProps) {
 
     const handleNavigation = () => {
         router.push({
-            pathname: '/(tabs)/inbox',
+            pathname: '/(stack)/offers',
             params: { id: thread._id }
         });
     };

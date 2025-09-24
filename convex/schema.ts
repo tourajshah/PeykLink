@@ -23,9 +23,9 @@ export default defineSchema({
         itemPrice: v.number(),
         travelerFee: v.number(),
         originCountry: v.string(),
-        originCity: v.optional(v.string()),
+        originCity: v.string(),
         destinationCountry: v.string(), 
-        destinationCity: v.optional(v.string()),
+        destinationCity: v.string(),
         requiredByDate: v.string(),
         status: v.string(),
         description: v.optional(v.string()),
@@ -55,6 +55,7 @@ export default defineSchema({
         tripId: v.id("trips"),       // The trip used for delivery (The "How")
         travelerId: v.id("users"),   // whom delivers the item
         requesterId: v.id("users"),  // who wants the item        
+        senderId: v.id("users"),     // who made this specific offer.
         proposedFee: v.number(), //  represents the negotiated amount.
 
         // Status tracks the negotiation process

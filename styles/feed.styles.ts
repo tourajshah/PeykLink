@@ -355,6 +355,18 @@ totalValue: {
   fontSize: 20,
   fontWeight: 'bold',
 },
+disabledButton: {
+    opacity: 0.5,
+    backgroundColor: '#333' // example
+},
+
+    modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' },
+    modalContent: { backgroundColor: '#2C2C2E', borderRadius: 14, padding: 20, width: '90%' },
+    modalInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1C1C1E', borderRadius: 10, paddingHorizontal: 12, marginBottom: 16 },
+    dollarSign: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold', marginRight: 4 },
+    modalInput: { flex: 1, color: '#FFFFFF', fontSize: 24, fontWeight: 'bold', height: 50 },
+    modalButton: { height: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: '#007BFF' },
+    modalButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 
 });
 

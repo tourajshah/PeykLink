@@ -270,6 +270,7 @@ export const createDirectRequestAndOffer = mutation({
             requesterId: currentUser._id,
             travelerId: args.targetedTravelerId,
             proposedFee: args.travelerFee, // The initial offer uses the fee from the form
+            senderId: currentUser._id,
             status: "pending",
         });
 
@@ -277,3 +278,5 @@ export const createDirectRequestAndOffer = mutation({
         return requestId;
     },
 });
+
+

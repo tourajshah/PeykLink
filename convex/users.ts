@@ -98,3 +98,29 @@ export const getUserProfile = query({
     }
 })
 
+
+export const checkUserHasMatchingTrip = query({
+    args: {
+        originCountry: v.string(),
+        destinationCountry: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        if (!currentUser) {
+            return false
+        }
+
+        const matchingTrip = await ctx.db 
+            .query("trips")
+            .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
+            .filter((q) =>
+                q.and(
+                    q.eq(q.field("originCountry"), args.originCountry,),
+                    q.eq(q.field("destinationCountry"), args.destinationCountry)
+                )
+            )
+            .first();
+
+        return matchingTrip !== null;
+    }
+})

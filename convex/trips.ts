@@ -224,3 +224,30 @@ export const getTripById = query({
         };
     },
 });
+
+
+export const getMyMatchingTrips = query({
+    args: {
+        originCity: v.string(),
+        destinationCity: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        if (!currentUser) {
+            return []
+        }
+
+        const matchingTrips = await ctx.db 
+            .query("trips")
+            .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
+            .filter((q) =>
+                q.and(
+                    q.eq(q.field("originCity"), args.originCity,),
+                    q.eq(q.field("destinationCity"), args.destinationCity)
+                )
+            )
+            .collect();
+
+        return matchingTrips
+    }
+})

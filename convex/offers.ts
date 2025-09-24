@@ -1,7 +1,7 @@
 // convex/offers.ts
-
+import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
 
 export const getMyOfferThreads = query({
@@ -116,3 +116,194 @@ export const getMyOfferThreads = query({
             .sort((a, b) => b.latestOffer._creationTime - a.latestOffer._creationTime);
     },
 });
+
+
+export const getOfferThreadDetails = query({
+    args: {
+        requestId: v.id("requests"),
+    },
+    handler: async (ctx, args) => {
+        // 1. Fetch the core request document
+        const request = await ctx.db.get(args.requestId);
+        if (!request) {
+            throw new Error("Request not found");
+        }
+
+        // 2. Fetch ALL offers for this request, sorted by creation time
+        const offers = await ctx.db
+            .query("offers")
+            .withIndex("by_requestId", q => q.eq("requestId", args.requestId))
+            .order("asc") // Sort ascending to get the history in chronological order
+            .collect();
+
+        if (offers.length === 0) {
+            throw new Error("No offers found for this request");
+        }
+        
+        // 3. From the request and offers, we know all the key players
+        const requesterId = request.requesterId;
+        const travelerId = offers[0].travelerId; // travelerId is the same on all offers in a thread
+        const tripId = offers[0].tripId;
+
+        // 4. Fetch all related documents in parallel for efficiency
+        const [requester, traveler, trip] = await Promise.all([
+            ctx.db.get(requesterId),
+            ctx.db.get(travelerId),
+            ctx.db.get(tripId),
+        ]);
+
+        // 5. Return everything in one convenient package for the frontend
+        return {
+            request,
+            offers, // The full history
+            requester,
+            traveler,
+            trip,
+        };
+    },
+});
+
+
+export const createCounterOffer = mutation({
+    args: {
+        requestId: v.id("requests"),
+        newFee: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+
+        // Find the latest offer to get context (IDs, etc.)
+        const latestOffer = await ctx.db
+            .query("offers")
+            .withIndex("by_requestId", q => q.eq("requestId", args.requestId))
+            .order("desc")
+            .first();
+
+        if (!latestOffer) {
+            throw new Error("No existing offer found to counter.");
+        }
+
+        // Create a brand new offer document for the counter-proposal
+        await ctx.db.insert("offers", {
+            requestId: latestOffer.requestId,
+            tripId: latestOffer.tripId,
+            requesterId: latestOffer.requesterId,
+            travelerId: latestOffer.travelerId,
+            senderId: currentUser._id, // The current user is the sender of this counter-offer
+            proposedFee: args.newFee,
+            status: "pending", // All new offers are pending
+        });
+    },
+});
+
+/**
+ * Accepts the latest offer in a thread.
+ * This ends the negotiation successfully.
+ */
+export const acceptOffer = mutation({
+    args: { offerId: v.id("offers") },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        const acceptedOffer = await ctx.db.get(args.offerId);
+
+        if (!acceptedOffer) {
+            throw new Error("Offer not found.");
+        }
+        // Security Check: Only the recipient can accept the offer.
+        if (acceptedOffer.senderId === (currentUser._id)) {
+            throw new Error("You cannot accept your own offer.");
+        }
+
+        // 1. Mark the accepted offer as "accepted"
+        await ctx.db.patch(args.offerId, { status: "accepted" });
+
+        // 2. Mark the parent request as "confirmed"
+        await ctx.db.patch(acceptedOffer.requestId, { status: "confirmed" });
+        
+        // (Future Step): Here you would create an `order` and initiate payment.
+    },
+});
+
+/**
+ * Rejects the latest offer (Traveler's action).
+ * This effectively ends the negotiation.
+ */
+export const rejectOffer = mutation({
+    args: { offerId: v.id("offers") },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        const rejectedOffer = await ctx.db.get(args.offerId);
+
+        if (!rejectedOffer) { throw new Error("Offer not found."); }
+
+        // Security Check: Only the traveler can reject the initial offer.
+        if (rejectedOffer.travelerId !== (currentUser._id)) {
+            throw new Error("Only the traveler can reject this offer.");
+        }
+        
+        await ctx.db.patch(args.offerId, { status: "rejected" });
+        // You might also want to change the request status back to "active"
+        await ctx.db.patch(rejectedOffer.requestId, { status: "active" });
+    },
+});
+
+
+/**
+ * Cancels the entire request and all associated offers (Requester's action).
+ */
+export const cancelOffer = mutation({
+    args: { requestId: v.id("requests") },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        const request = await ctx.db.get(args.requestId);
+
+        if (!request) { throw new Error("Request not found."); }
+
+        // Security Check: Only the requester can cancel their own request.
+        if (request.requesterId !==(currentUser._id)) {
+            throw new Error("You are not authorized to cancel this request.");
+        }
+
+        // 1. Cancel the parent request
+        await ctx.db.patch(args.requestId, { status: "cancelled" });
+
+        // 2. Find all offers for this request and cancel them too
+        const offers = await ctx.db.query("offers").withIndex("by_requestId", q => q.eq("requestId", args.requestId)).collect();
+        for (const offer of offers) {
+            await ctx.db.patch(offer._id, { status: "cancelled" });
+        }
+    },
+});
+
+export const createInitialOffer = mutation({
+    // We need all the request arguments, PLUS the tripId for the offer
+    args: {
+        // same args from createRequest
+        requestId: v.id("requests"),
+        tripId: v.id("trips"),
+        proposedFee: v.number()
+
+    },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+
+        const request = await ctx.db.get(args.requestId);
+        if (!request) {
+          throw new Error("Request not found");
+        }
+
+        await ctx.db.insert("offers", {
+            requestId: args.requestId,
+            tripId: args.tripId,
+            requesterId: request.requesterId,
+            travelerId: currentUser._id,
+            proposedFee: args.proposedFee, // The initial offer uses the fee from the form
+            senderId: currentUser._id,
+            status: "pending",
+        });
+
+        // Return the new requestId so we can navigate if needed
+        return args.requestId;
+    },
+});
+
