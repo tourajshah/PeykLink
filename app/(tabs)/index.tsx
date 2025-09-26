@@ -9,7 +9,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Dimensions,
   FlatList,
   LayoutAnimation,
   ListRenderItemInfo,
@@ -22,83 +21,67 @@ import {
   UIManager,
   View,
 } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-
-// ENABLE LAYOUTANIMATION FOR ANDROID
-
+// Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true)
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+// MODIFIED: Light Theme COLORS
 const COLORS = {
-  primary: '#007BFF',
-  white: '#FFFFFF',
-  grey: '#AEAEB2',
-  dark: '#1C1C1E',
-  card: '#2C2C2E',
-  red: '#FF3B30',
-  background: '#121212',
+  primary: '#007BFF', // Stays blue
+  white: '#FFFFFF',   // Used for backgrounds
+  grey: '#6A6A6A',    // Darker grey for text on light backgrounds
+  lightGrey: '#F0F0F0', // Very light grey for card backgrounds
+  darkGrey: '#333333',  // Almost black for main text
+  red: '#FF3B30',     // Stays red for accents
+  background: '#F9F9F9', // Overall app background (off-white)
+  borderColor: '#E0E0E0', // Light border for definition
 };
 
-const { width } = Dimensions.get('window')
-
 export default function Index() {
-  const {signOut}=useAuth()
-  const [activeTab, setActiveTab] = useState<'trips' | 'requests'>('trips')
-  const [originSearch, setOriginSearch] = useState('')
-  const [destinationSearch, setDestinationSearch] = useState('')
-
-
-  const trips = useQuery(api.trips.getFeedTrips)
-  const requests = useQuery(api.requests.getFeedRequests)
-
-  const prevShowResetButtonRef = useRef(false)
-
-  useEffect(() => {
-      const currentShowResetButton = (originSearch !== '' || destinationSearch !== '')
-      if (currentShowResetButton !== prevShowResetButtonRef.current) {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-      }
-      prevShowResetButtonRef.current = currentShowResetButton
-    }, [originSearch, destinationSearch])
-
-    const tabPosition = useSharedValue(0)
-    const animatedIndicatorStyle = useAnimatedStyle(() => {
-      return {
-        transform: [{ translateX: tabPosition.value}],
-      }
-    })
-
-    const onTabPress = (tab: 'trips' | 'requests') => {
-      setActiveTab(tab)
-      const newPosition = tab === 'trips' ? 0 : (width - 32) / 2
-      tabPosition.value = withTiming(newPosition, { duration: 250 })
-    }
+  const { signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState<'trips' | 'requests'>('trips');
+  const [originSearch, setOriginSearch] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
   
+  // REMOVED: isSearchVisible state is no longer needed
 
-  if(trips === undefined || requests === undefined) return <Loader />
+  const trips = useQuery(api.trips.getFeedTrips);
+  const requests = useQuery(api.requests.getFeedRequests);
+
+  const prevShowResetButtonRef = useRef(false);
+
+  // MODIFIED: Animate only when reset button visibility changes
+  useEffect(() => {
+    const currentShowResetButton = (originSearch !== '' || destinationSearch !== '');
+    if (currentShowResetButton !== prevShowResetButtonRef.current) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+    prevShowResetButtonRef.current = currentShowResetButton;
+  }, [originSearch, destinationSearch]); // Removed isSearchVisible from dependencies
+
+
+  if (trips === undefined || requests === undefined) return <Loader />;
 
   type TripType = (typeof trips)[number];
   type RequestType = (typeof requests)[number];
   type FeedItem = TripType | RequestType;
-  
+
   const isTripsActive = activeTab === 'trips';
 
   const filteredTrips = trips.filter(trip =>
     (originSearch === '' || trip.originCity.toLowerCase().includes(originSearch.toLowerCase())) &&
     (destinationSearch === '' || trip.destinationCity.toLowerCase().includes(destinationSearch.toLowerCase()))
-  )
+  );
 
   const filteredRequests = requests.filter(request =>
     (originSearch === '' || request.originCity.toLowerCase().includes(originSearch.toLowerCase())) &&
     (destinationSearch === '' || request.destinationCity.toLowerCase().includes(destinationSearch.toLowerCase()))
+  );
 
-  )
-
-  const dataToRender = isTripsActive ? trips : requests;
-  const noData = dataToRender.length === 0
-
+  const dataToRender = isTripsActive ? filteredTrips : filteredRequests;
+  const noData = dataToRender.length === 0;
 
   const renderFeedItem = ({ item }: ListRenderItemInfo<FeedItem>) => {
     if (isTripsActive) {
@@ -108,50 +91,49 @@ export default function Index() {
   };
 
   const handleResetSearch = () => {
-    setOriginSearch('')
-    setDestinationSearch('')
-  }
+    setOriginSearch('');
+    setDestinationSearch('');
+  };
 
-  const showResetButton = originSearch !== '' || destinationSearch !== ''
+  // REMOVED: toggleSearch function is no longer needed
 
-return (
+  const showResetButton = originSearch !== '' || destinationSearch !== '';
+
+  return (
     <View style={styles.container}>
-      {/* === Header === */}
+      {/* === MODIFIED: Compact Header (No search icon toggle) === */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>PeykLink</Text>
-        <TouchableOpacity onPress={() => signOut()} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={26} color={COLORS.grey} />
+        <TouchableOpacity onPress={() => signOut()} style={styles.headerButton}>
+            <Ionicons name="log-out-outline" size={24} color={COLORS.darkGrey} /> {/* Dark text for light background */}
         </TouchableOpacity>
       </View>
 
-      {/* === Sticky Control Section === */}
+      {/* === MODIFIED: Sticky Control Section is now always visible and compact === */}
       <View style={styles.stickyHeaderContainer}>
+        {/* Search Bar is always rendered */}
         <SearchBar
-          originSearch={originSearch}
-          setOriginSearch={setOriginSearch}
-          destinationSearch={destinationSearch}
-          setDestinationSearch={setDestinationSearch}
+            originSearch={originSearch}
+            setOriginSearch={setOriginSearch}
+            destinationSearch={destinationSearch}
+            setDestinationSearch={setDestinationSearch}
         />
-
         {showResetButton && (
-          <TouchableOpacity onPress={handleResetSearch} style={styles.resetButtonContainer}>
-            <Ionicons name="close-circle-outline" size={20} color={COLORS.red} />
-            <Text style={styles.resetButtonText}>Reset Filters</Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={handleResetSearch} style={styles.resetButtonContainer}>
+                <Ionicons name="close-circle-outline" size={18} color={COLORS.red} />
+                <Text style={styles.resetButtonText}>Reset Filters</Text>
+            </TouchableOpacity>
         )}
-
-        {/* MODIFIED: New Animated Tab Container */}
         <View style={styles.tabContainer}>
-          <Animated.View style={[styles.tabIndicator, animatedIndicatorStyle]} />
           <TouchableOpacity
-            style={styles.tab}
-            onPress={() => onTabPress('trips')}
+            style={[styles.tab, isTripsActive && styles.activeTab]}
+            onPress={() => setActiveTab('trips')}
           >
             <Text style={[styles.tabText, isTripsActive && styles.activeTabText]}>Trips</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.tab}
-            onPress={() => onTabPress('requests')}
+            style={[styles.tab, !isTripsActive && styles.activeTab]}
+            onPress={() => setActiveTab('requests')}
           >
             <Text style={[styles.tabText, !isTripsActive && styles.activeTabText]}>Requests</Text>
           </TouchableOpacity>
@@ -164,16 +146,16 @@ return (
         renderItem={renderFeedItem}
         keyExtractor={(item) => item._id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.flatListContentContainer} // Changed to a named style
+        contentContainerStyle={styles.flatListContentContainer}
         ListEmptyComponent={<NoItemsFound type={activeTab} />}
-        // ListHeaderComponent={<StoriesSection />}
+        // ListHeaderComponent={<StoriesSection />} // Stories are still part of the scrollable content
       />
     </View>
   );
 }
 
 
-// SearchBar Component (Styling refined)
+// SearchBar Component (No logic changes, only styles to fit light theme)
 type SearchBarProps = {
   originSearch: string;
   setOriginSearch: (text: string) => void;
@@ -189,7 +171,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   return (
     <View style={styles.searchBarContainer}>
-      <View style={styles.searchInputGroup}>
         <Ionicons name="airplane-outline" size={20} color={COLORS.grey} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
@@ -199,9 +180,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           onChangeText={setOriginSearch}
           autoCapitalize="words"
         />
-      </View>
       <View style={styles.separator} />
-      <View style={styles.searchInputGroup}>
         <Ionicons name="location-outline" size={20} color={COLORS.grey} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
@@ -211,187 +190,194 @@ const SearchBar: React.FC<SearchBarProps> = ({
           onChangeText={setDestinationSearch}
           autoCapitalize="words"
         />
-      </View>
     </View>
   );
 };
 
 
-// StoriesSection component (Now with a title)
+// StoriesSection and NoItemsFound components remain the same, but with light theme styles
 const StoriesSection = () => {
-  return (
-    <View style={styles.storiesOuterContainer}>
-      <Text style={styles.sectionTitle}>Featured Trips</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.storiesContainer}
-      >
-        {STORIES.map((story) => (
-          <Story key={story.id} story={story} />
-        ))}
-      </ScrollView>
+    return (
+      <View style={styles.storiesOuterContainer}>
+        <Text style={styles.sectionTitle}>Featured Trips</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.storiesContainer}
+        >
+          {STORIES.map((story) => (
+            <Story key={story.id} story={story} />
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+  
+  const NoItemsFound = ({ type }: { type: 'trips' | 'requests' }) => (
+    <View style={styles.noItemsContainer}>
+      <Ionicons name="search-circle-outline" size={80} color={COLORS.borderColor} /> {/* Lighter icon */}
+      <Text style={styles.noItemsTitle}>No {type} found</Text>
+      <Text style={styles.noItemsSubtitle}>Try adjusting your search filters or check back later!</Text>
     </View>
   );
-};
 
-
-// NoItemsFound component (Styling enhanced)
-const NoItemsFound = ({ type }: { type: 'trips' | 'requests' }) => (
-  <View style={styles.noItemsContainer}>
-    <Ionicons name="search-circle-outline" size={80} color={COLORS.card} />
-    <Text style={styles.noItemsTitle}>No {type} found</Text>
-    <Text style={styles.noItemsSubtitle}>Try adjusting your search filters or check back later!</Text>
-  </View>
-);
-
-
-// STYLES
+// STYLES (Converted to Light Theme, compact sizing maintained)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    paddingTop: Platform.OS === 'android' ? 25 : 50,
+    backgroundColor: COLORS.background, // Light background
+    paddingTop: Platform.OS === 'android' ? 0 : 0,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 0,
+    backgroundColor: COLORS.background, // Match background
+    borderBottomWidth: StyleSheet.hairlineWidth, // Subtle separator
+    borderBottomColor: COLORS.borderColor,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 26, // Slightly smaller for more compactness
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: COLORS.darkGrey, // Dark text on light background
   },
-  logoutButton: {
+  headerButton: { // Used for logout button
     padding: 8,
   },
+  // Sticky header container for Search and Tabs
   stickyHeaderContainer: {
-    paddingBottom: 10,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.background, // Match background
+    paddingBottom: 8, // Reduced padding
+    zIndex: 1, // Ensure it stays above scrolling content
+    borderBottomWidth: StyleSheet.hairlineWidth, // Subtle separator
+    borderBottomColor: COLORS.borderColor,
   },
   // === Search Bar Styles ===
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
+    backgroundColor: COLORS.white, // Light card background
+    borderRadius: 12,
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10, // Good spacing
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  searchInputGroup: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
+    borderColor: COLORS.borderColor, // Light border
+    shadowColor: '#000', // Subtle shadow for depth
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   searchIcon: {
-    marginRight: 10,
+      paddingLeft: 12,
+      color: COLORS.grey, // Darker icon for contrast
   },
   searchInput: {
     flex: 1,
-    color: COLORS.white,
+    color: COLORS.darkGrey, // Dark text
     fontSize: 16,
-    paddingVertical: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
   },
   separator: {
     width: 1,
-    height: '60%',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    height: '50%',
+    backgroundColor: COLORS.borderColor, // Light separator
   },
-  // === Reset Button Styles (MODIFIED) ===
+  // === Reset Button Styles ===
   resetButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center', // Centered horizontally
-    backgroundColor: 'rgba(255, 59, 48, 0.15)',
-    borderRadius: 12,
-    marginHorizontal: 'auto', // Auto margins for centering
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    maxWidth: 150, // Limit width so it doesn't span whole screen
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 59, 48, 0.1)', // Light red background
+    borderRadius: 10,
+    marginHorizontal: 'auto',
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    maxWidth: 160, // Slightly wider for better touch target
+    borderWidth: 1, // Subtle border
+    borderColor: 'rgba(255, 59, 48, 0.2)',
   },
   resetButtonText: {
     color: COLORS.red,
-    fontSize: 14,
+    fontSize: 14, // Slightly larger for readability
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: 6,
   },
-  // === Animated Tab Navigation Styles ===
+  // === Tab Navigation Styles ===
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
+    backgroundColor: COLORS.white, // Light card background
+    borderRadius: 12,
     marginHorizontal: 16,
-    marginTop: 16,
-    position: 'relative',
-    overflow: 'hidden',
+    marginTop: 12,
+    padding: 4,
+    justifyContent: 'space-around',
+    borderWidth: 1,
+    borderColor: COLORS.borderColor, // Light border
+    shadowColor: '#000', // Subtle shadow
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
+    borderRadius: 8,
+  },
+  activeTab: {
+    backgroundColor: COLORS.primary,
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: COLORS.grey,
-    // REMOVED: transition: 'color 0.3s', // This was the error
+    color: COLORS.grey, // Darker text for inactive tabs
   },
   activeTabText: {
-    color: COLORS.white,
-  },
-  tabIndicator: {
-    position: 'absolute',
-    height: '100%',
-    width: '50%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    zIndex: 0,
+    color: COLORS.white, // White text on primary background
   },
   // === Stories Section Styles ===
   storiesOuterContainer: {
     paddingTop: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18, // Slightly smaller for more compact layout
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: COLORS.darkGrey, // Dark text
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 10, // Reduced margin
   },
   storiesContainer: {
     paddingLeft: 16,
+    marginBottom: 10,
   },
   // === No Items Found Styles ===
   noItemsContainer: {
-    height: 400,
+    height: 300, // Reduced height
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    backgroundColor: COLORS.background, // Match screen background
   },
   noItemsTitle: {
-    fontSize: 22,
+    fontSize: 20, // Slightly smaller
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: COLORS.darkGrey, // Dark text
     marginTop: 15,
   },
   noItemsSubtitle: {
-    fontSize: 16,
+    fontSize: 15, // Slightly smaller
     color: COLORS.grey,
     textAlign: 'center',
     marginTop: 8,
   },
-  // NEW: FlatList content container style for bottom padding
   flatListContentContainer: {
-    paddingBottom: 60, // Add space for the bottom tab bar
+    paddingBottom: 60,
     paddingTop: 0,
-  }
+  },
 });
