@@ -44,9 +44,8 @@ export default defineSchema({
         arrivalDate: v.string(),
         availableSpace: v.string(),
         status: v.string(),
-        description: v.optional(v.string()),
         acceptedItemTypes: v.optional(v.string()),
-        airline: v.optional(v.string()),
+        airline: v.string(),
 
     }).index("by_travelerId", ["travelerId"]),
 
@@ -67,7 +66,7 @@ export default defineSchema({
         ),
 
         // Optional message from the traveler/requester with their offer
-        note: v.optional(v.string()),
+        creatorId: v.id("users"),
 
     }).index("by_requestId", ["requestId"])
       .index("by_tripId", ["tripId"]),

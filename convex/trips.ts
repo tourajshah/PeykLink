@@ -21,9 +21,8 @@ export const createTrip = mutation({
         destinationCity: v.string(),
         arrivalDate: v.string(),
         availableSpace: v.string(),
-        description: v.optional(v.string()),
         acceptedItemTypes: v.optional(v.string()),
-        airline: v.optional(v.string()),
+        airline: v.string(),
     },
 
     handler: async (ctx,args) => {
@@ -41,7 +40,6 @@ export const createTrip = mutation({
             arrivalDate: args.arrivalDate,
             availableSpace: args.availableSpace,
             status: "active",
-            description: args.description,
             acceptedItemTypes: args.acceptedItemTypes,
             airline: args.airline,
 

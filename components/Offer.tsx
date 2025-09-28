@@ -6,28 +6,40 @@ import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from 'convex/react';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// --- Revamped & Expanded Color Palette ---
+// --- UPDATED Color Palette ---
 const COLORS = {
-    primary: '#0A84FF',        // A vibrant blue for calls to action
-    primaryMuted: 'rgba(10, 132, 255, 0.2)', // A softer blue for backgrounds
-    white: '#FFFFFF',
-    black: '#000000',
-    grey: '#8E8E93',           // For secondary text
-    lightGrey: '#3A3A3C',       // For borders and dividers
-    background: '#000000',
-    card: '#1C1C1E',           // Dark card background
+    primary: '#007BFF', // Changed
+    primary_light: '#4DA3FF', // Added
+    primaryMuted: 'rgba(0, 123, 255, 0.2)', // Adjusted to match new primary
+    white: '#FFFFFF', // Unchanged
+    black: '#000000', // Unchanged
+    grey: '#AEAEB2', // Changed
+    lightGrey: '#3A3A3C', // Unchanged
+    dark: '#1C1C1E', // Added
+    background: '#1C1C1E', // Updated to use the new dark color
+    card: '#2C2C2E', // Changed
     green: '#30D158',
     greenMuted: 'rgba(48, 209, 88, 0.2)',
     red: '#FF453A',
     redMuted: 'rgba(255, 69, 58, 0.2)',
-    gold: '#FFD60A'             // For pending/new offer status
+    gold: '#FFD60A',
+    subtleBackground: '#F2F2F7',
+    subtleBorder: '#E5E5EA',
 };
 
-// --- Type Definitions (No Changes Needed) ---
+// --- Gradient Colors for Backgrounds (Updated to use new card color) ---
+const GRADIENTS = {
+    trip: ['#007BFF25', COLORS.card] as const,
+    request: ['#10B98125', COLORS.card] as const,
+};
+
+
+// --- Type Definitions (Unchanged) ---
 type OfferWithSender = Doc<"offers"> & { requesterId: Id<"users"> };
 
 type OfferThread = {
@@ -41,13 +53,16 @@ type OfferThread = {
     otherUser: { _id?: Id<"users">; username?: string; image?: string };
     latestOffer: OfferWithSender;
     offerCount: number;
+    requester: string;
+    traveler: string;
 };
 
 type OfferThreadItemProps = {
     thread: OfferThread;
 };
 
-// --- Helper Functions (No Changes Needed) ---
+
+// --- Helper Functions (Unchanged) ---
 const formatDisplayDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -69,131 +84,179 @@ const formatRelativeTime = (timestamp: number) => {
 
 
 export default function OfferThreadItem({ thread }: OfferThreadItemProps) {
+    // --- Animation Setup ---
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
+
+
     const { user: clerkUser } = useUser();
     const currentUser = useQuery(api.users.getUserByClerkId, clerkUser ? { clerkId: clerkUser.id } : "skip");
 
-    // --- Enhanced Status Logic ---
-    // This now returns a background color for our status "pill"
-    const { statusText, statusColor, statusBgColor, statusIcon, needsAction } = React.useMemo(() => {
-        if (!currentUser) return {}; 
+    const offerContext = React.useMemo(() => {
+        if (!currentUser) return null;
+        return currentUser._id.toString() === thread.traveler ? 'TRIP' : 'REQUEST';
+    }, [currentUser, thread.traveler]);
+
+    const isTrip = offerContext === 'TRIP';
+
+    const { contextText, contextIcon } = React.useMemo(() => ({
+        contextText: isTrip ? 'Trip Offer' : 'Request Offer',
+        contextIcon: (isTrip ? 'airplane-outline' : 'cube-outline') as keyof typeof Ionicons.glyphMap,
+    }), [offerContext]);
+
+    // Borders have been completely removed from this logic.
+    const { statusLabel, feeText, statusColor, needsAction, directionIcon } = React.useMemo(() => {
+        if (!currentUser) return {};
         const { latestOffer } = thread;
-        const didISendLatestOffer = currentUser?._id && latestOffer.requesterId === currentUser._id;
-        
-        let statusText = '';
-        let statusColor = COLORS.grey;
-        let statusBgColor = COLORS.lightGrey; // Default background
-        let statusIcon: keyof typeof Ionicons.glyphMap = 'help-circle-outline';
-        let needsAction = false;
+        const didISendLatestOffer = currentUser?._id === latestOffer.senderId;
+        const feeText = `$${latestOffer.proposedFee}`;
+
+        let statusLabel = '', statusColor = COLORS.grey;
+        let needsAction = false, directionIcon: keyof typeof Ionicons.glyphMap = didISendLatestOffer ? 'arrow-up-circle-outline' : 'arrow-down-circle-outline';
 
         switch (latestOffer.status) {
             case 'pending':
                 if (didISendLatestOffer) {
-                    statusText = `You Offered: $${latestOffer.proposedFee}`;
-                    statusIcon = 'arrow-up-circle-outline';
+                    statusLabel = 'Offer Sent';
+                    statusColor = COLORS.primary;
                 } else {
-                    statusText = `New Offer: $${latestOffer.proposedFee}`;
-                    statusColor = COLORS.primary; // Use a distinct color for incoming offers
-                    statusBgColor = COLORS.primaryMuted;
-                    statusIcon = 'sparkles-outline';
+                    statusLabel = 'NEW OFFER';
+                    statusColor = COLORS.gold;
                     needsAction = true;
                 }
                 break;
             case 'accepted':
-                statusText = 'Offer Accepted';
+                statusLabel = 'Deal Made';
                 statusColor = COLORS.green;
-                statusBgColor = COLORS.greenMuted;
-                statusIcon = 'checkmark-circle';
+                directionIcon = 'checkmark-circle-outline';
                 break;
             case 'rejected':
-                statusText = 'Offer Rejected';
+                statusLabel = 'Rejected';
                 statusColor = COLORS.red;
-                statusBgColor = COLORS.redMuted;
-                statusIcon = 'close-circle';
+                directionIcon = 'close-circle-outline';
                 break;
             case 'cancelled':
-                statusText = 'Offer Cancelled';
-                statusIcon = 'remove-circle-outline';
+                statusLabel = 'Cancelled';
+                directionIcon = 'remove-circle-outline';
                 break;
         }
-        return { statusText, statusColor, statusBgColor, statusIcon, needsAction };
+        return { statusLabel, feeText, statusColor, needsAction, directionIcon };
     }, [thread.latestOffer, currentUser]);
-
-    if (!currentUser) {
-        return null; // Or a loading skeleton
-    }
 
     const handleNavigation = () => {
         router.push({
             pathname: '/(stack)/offers',
-            params: { id: thread._id }
+            params: { id: thread._id },
         });
     };
 
+    const gradientColors = isTrip ? GRADIENTS.trip : GRADIENTS.request;
+    const travelerAvatar = isTrip ? currentUser?.imageURL : thread.otherUser.image;
+
     return (
-        <TouchableOpacity style={styles.cardContainer} onPress={handleNavigation}>
-            {/* --- CARD HEADER: User Info & Timestamp --- */}
-            <View style={styles.cardHeader}>
-                <Image
-                    source={{ uri: thread.otherUser.image }}
-                    style={styles.avatar}
-                    contentFit="cover"
-                />
-                 {needsAction && <View style={styles.unreadDot} />}
-                <View style={styles.userInfo}>
-                    <Text style={styles.username}>{thread.otherUser.username}</Text>
-                    <Text style={styles.timestamp}>{formatRelativeTime(thread.latestOffer._creationTime)}</Text>
-                </View>
-            </View>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+            <TouchableOpacity onPress={handleNavigation} style={styles.shadowContainer}>
+                <LinearGradient
+                    colors={gradientColors}
+                    start={{ x: 0, y: 1 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.cardContainer}
+                >
+                    {/* --- CARD HEADER --- */}
+                    <View style={styles.cardHeader}>
+                        <View style={styles.userInfoContainer}>
+                            <Image source={{ uri: thread.otherUser.image }} style={styles.avatar} contentFit="cover" />
+                            <View style={styles.userInfo}>
+                                <Text style={styles.username}>{thread.otherUser.username}</Text>
+                                <Text style={styles.timestamp}>{formatRelativeTime(thread.latestOffer._creationTime)}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.contextTag}>
+                            <Ionicons name={contextIcon} size={14} color={COLORS.grey} />
+                            <Text style={styles.contextText}>{contextText}</Text>
+                        </View>
+                    </View>
 
-            {/* --- CARD BODY: Product & Trip Details --- */}
-            <View style={styles.cardBody}>
-                <View style={styles.detailRow}>
-                    <Ionicons name="cube-outline" size={20} color={COLORS.grey} style={styles.detailIcon} />
-                    <Text style={styles.productName} numberOfLines={1}>
-                        {thread.requestDetails.productName}
-                    </Text>
-                </View>
-                <View style={styles.detailRow}>
-                    <Ionicons name="airplane-outline" size={20} color={COLORS.grey} style={styles.detailIcon} />
-                    <Text style={styles.tripInfoText} numberOfLines={1}>
-                        {thread.tripDetails.originCity} → {thread.tripDetails.destinationCity}
-                        <Text style={styles.dateText}> on {formatDisplayDate(thread.tripDetails.arrivalDate)}</Text>
-                    </Text>
-                </View>
-            </View>
+                    {/* --- OFFER DETAILS --- */}
+                    <View style={styles.offerDetailsContainer}>
+                        <Text style={styles.productName} numberOfLines={2}>
+                            {thread.requestDetails.productName}
+                        </Text>
+                        <View style={styles.tripInfoContainer}>
+                            <Image source={{ uri: travelerAvatar }} style={styles.smallAvatar} contentFit="cover" />
+                            <Text style={styles.tripInfoText} numberOfLines={1}>
+                                {thread.tripDetails.originCity} → {thread.tripDetails.destinationCity}
+                                <Text style={styles.dateText}> on {formatDisplayDate(thread.tripDetails.arrivalDate)}</Text>
+                            </Text>
+                        </View>
+                    </View>
 
-            {/* --- CARD FOOTER: Status Pill --- */}
-            <View style={[styles.statusPill, { backgroundColor: statusBgColor }]}>
-                <Ionicons name={statusIcon as any} size={16} color={statusColor} style={styles.statusIcon} />
-                <Text style={[styles.statusText, { color: statusColor }]}>
-                    {statusText}
-                </Text>
-            </View>
-        </TouchableOpacity>
+                    {/* --- FOOTER with CONSISTENT LAYOUT --- */}
+                    <View style={styles.cardFooter}>
+                        {needsAction ? (
+                            <LinearGradient colors={['#FFD60A', '#FFA800']} style={styles.statusTag}>
+                                <Ionicons name="sparkles-outline" size={16} color={COLORS.black} />
+                                <Text style={styles.statusTagText}>{statusLabel}</Text>
+                            </LinearGradient>
+                        ) : (
+                            <View style={styles.statusChip}>
+                                <Ionicons name={directionIcon as any} size={16} color={statusColor} />
+                                <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+                            </View>
+                        )}
+
+                        <Text style={[styles.rewardText, { color: statusColor }]}>{feeText}</Text>
+                    </View>
+                </LinearGradient>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
 
 
-// --- Completely Revamped StyleSheet for a Modern Look ---
+// --- StyleSheet using solid, theme-agnostic colors ---
 const styles = StyleSheet.create({
-    cardContainer: {
-        backgroundColor: COLORS.card,
-        borderRadius: 16,
+    shadowContainer: {
         marginHorizontal: 16,
-        marginVertical: 8,
-        padding: 16,
-        // Subtle shadow for iOS
+        marginVertical: 10,
+        borderRadius: 28,
         shadowColor: COLORS.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        // Subtle shadow for Android
-        elevation: 5,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.5,
+        shadowRadius: 15,
+        elevation: 16,
+    },
+    cardContainer: {
+        borderRadius: 28,
+        padding: 16,
+        backgroundColor: COLORS.card, // Set a solid background color
+        overflow: 'hidden',
     },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 16,
+    },
+    userInfoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
     },
     avatar: {
         width: 48,
@@ -201,70 +264,100 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         marginRight: 12,
         borderWidth: 2,
-        borderColor: COLORS.lightGrey,
+        borderColor: COLORS.subtleBorder,
     },
     userInfo: {
         flex: 1,
     },
     username: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: COLORS.white,
+        fontSize: 18,
+        fontWeight: '700',
+        color: COLORS.white, // Kept as white for dark theme text
     },
     timestamp: {
-        fontSize: 13,
+        fontSize: 14,
         color: COLORS.grey,
+        marginTop: 2,
     },
-    unreadDot: {
-        position: 'absolute',
-        top: -2,
-        left: -2,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: COLORS.primary,
-        borderWidth: 2,
-        borderColor: COLORS.card,
-    },
-    cardBody: {
-        marginBottom: 16,
-    },
-    detailRow: {
+    contextTag: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)', // Kept subtle dark theme value
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        marginLeft: 8,
     },
-    detailIcon: {
-        marginRight: 10,
+    contextText: {
+        color: COLORS.grey,
+        fontSize: 12,
+        fontWeight: '500',
+        marginLeft: 4,
+    },
+    offerDetailsContainer: {
+        marginBottom: 16,
     },
     productName: {
-        fontSize: 18,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: COLORS.white,
-        flex: 1,
+        color: COLORS.white, // Kept as white for dark theme text
+        marginBottom: 12,
+        lineHeight: 28,
+    },
+    tripInfoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.2)', // Kept subtle dark theme value
+        padding: 10,
+        borderRadius: 12,
+    },
+    smallAvatar: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        marginRight: 10,
     },
     tripInfoText: {
-        fontSize: 15,
-        color: COLORS.white,
+        fontSize: 16,
+        color: COLORS.white, // Kept as white for dark theme text
         flex: 1,
     },
     dateText: {
         color: COLORS.grey,
         fontWeight: '500',
     },
-    statusPill: {
+    cardFooter: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 12,
+        justifyContent: 'space-between',
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)', // Kept subtle dark theme value
     },
-    statusIcon: {
-        marginRight: 8,
+    statusChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    statusText: {
-        fontSize: 15,
+    statusLabel: {
+        fontSize: 16,
         fontWeight: '600',
+        marginLeft: 8,
+    },
+    statusTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 30,
+    },
+    statusTagText: {
+        color: COLORS.black,
+        fontSize: 16,
+        fontWeight: '800',
+        marginLeft: 6,
+    },
+    rewardText: {
+        fontSize: 28,
+        fontWeight: '900',
     },
 });

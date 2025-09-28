@@ -62,6 +62,9 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/estree": "^1.0.8",
+    "@types/hammerjs": "^2.0.46",
+    "@types/json-schema": "^7.0.15",
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",

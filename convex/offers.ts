@@ -107,6 +107,8 @@ export const getMyOfferThreads = query({
                 },
                 latestOffer: latestOffer,
                 offerCount: offers.length,
+                requester: latestOffer.requesterId.toString(),
+                traveler: latestOffer.travelerId.toString()
             };
         });
 
@@ -117,6 +119,7 @@ export const getMyOfferThreads = query({
     },
 });
 
+// FOR BUBBLE OFFER AND COUNTER OFFER DETAILS.
 
 export const getOfferThreadDetails = query({
     args: {
@@ -191,6 +194,7 @@ export const createCounterOffer = mutation({
             travelerId: latestOffer.travelerId,
             senderId: currentUser._id, // The current user is the sender of this counter-offer
             proposedFee: args.newFee,
+            creatorId: latestOffer.creatorId,
             status: "pending", // All new offers are pending
         });
     },
@@ -299,6 +303,7 @@ export const createInitialOffer = mutation({
             travelerId: currentUser._id,
             proposedFee: args.proposedFee, // The initial offer uses the fee from the form
             senderId: currentUser._id,
+            creatorId: currentUser._id,
             status: "pending",
         });
 

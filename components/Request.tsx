@@ -10,7 +10,7 @@ import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import LottieView from 'lottie-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, LayoutAnimation, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, LayoutAnimation, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CountryFlag from "react-native-country-flag";
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -258,7 +258,18 @@ export default function Request({request}: RequestProps) {
             {/* Offer Submission Modal */}
             <Modal transparent={true} visible={isOfferModalVisible} onRequestClose={() => setOfferModalVisible(false)}>
                 <Pressable style={cardStyles.modalCenteredView} onPress={() => setOfferModalVisible(false)}>
-                    {/* ... (modal code remains the same) */}
+                    <Pressable style={cardStyles.modalView}>
+                        <Text style={cardStyles.modalTitle}>Propose a Delivery Fee</Text>
+                        <View style={cardStyles.modalInputContainer}>
+                            <Text style={cardStyles.dollarSign}>$</Text>
+                            <TextInput style={cardStyles.modalInput} placeholder={request.travelerFee.toFixed(2)} placeholderTextColor={COLORS.grey} keyboardType="numeric" value={proposedFee} onChangeText={setProposedFee} autoFocus={true}/>
+                        </View>
+                        <Pressable onPress={handleSubmitOffer} disabled={isSubmitting}>
+                            <LinearGradient colors={isSubmitting ? [COLORS.grey, COLORS.grey] : [COLORS.primary_light, COLORS.primary]} style={cardStyles.modalSubmitButton}>
+                                {isSubmitting ? <ActivityIndicator color={COLORS.white} /> : <Text style={cardStyles.modalButtonText}>Send Offer</Text>}
+                            </LinearGradient>
+                        </Pressable>
+                    </Pressable>
                 </Pressable>
             </Modal>
         </Animated.View>

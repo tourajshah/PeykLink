@@ -14,10 +14,11 @@ import { FlatList, ListRenderItemInfo, Platform, StyleSheet, Text, TextInput, To
 const COLORS = {
     primary: '#0A84FF',
     white: '#FFFFFF',
+    black: '#000000',
     grey: '#8E8E93',
-    lightGrey: '#48484A',
-    background: '#000000',
-    card: '#1C1C1E',
+    lightGrey: '#D1D1D6',
+    background: '#F2F2F7',
+    card: '#FFFFFF',
 };
 
 export default function InboxScreen() {
@@ -119,13 +120,13 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'android' ? 40 : 50,
         paddingBottom: 10,
         backgroundColor: COLORS.card,
-        borderBottomWidth: 1,
+        borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: COLORS.lightGrey,
     },
     headerTitle: {
         fontSize: 34,
         fontWeight: 'bold',
-        color: COLORS.white,
+        color: COLORS.black,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 44,
         fontSize: 17,
-        color: COLORS.white,
+        color: COLORS.black,
     },
     listContainer: {
         paddingTop: 16,
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: COLORS.white,
+        color: COLORS.black,
         marginTop: 16,
     },
     emptySubtext: {
@@ -169,3 +170,9 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
+
+
+
+
+
+

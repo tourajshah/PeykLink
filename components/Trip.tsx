@@ -41,7 +41,7 @@ type TripProps = {
         availableSpace: string;
         originCountryCode: string;
         destinationCountryCode: string;
-        airline?: string;
+        airline: string;
         traveler:{
             _id: string;
             username: string;
