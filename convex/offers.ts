@@ -73,7 +73,7 @@ export const getMyOfferThreads = query({
         }
 
         // --- Step 6: Assemble the final threads using the pre-fetched data ---
-        const threads = Array.from(offersByThread.values()).map((offers) => {
+        let threads = Array.from(offersByThread.values()).map((offers) => {
             const latestOffer = offers.sort((a, b) => b._creationTime - a._creationTime)[0];
 
             // Look up data from our maps - NO 'await' needed!
@@ -108,9 +108,18 @@ export const getMyOfferThreads = query({
                 latestOffer: latestOffer,
                 offerCount: offers.length,
                 requester: latestOffer.requesterId.toString(),
-                traveler: latestOffer.travelerId.toString()
+                traveler: latestOffer.travelerId.toString(),
+                creator: latestOffer.creatorId.toString(),
             };
         });
+
+        // CHECK IF OFFER IS MADE BY USER OR TO USER / DONT DELETE SLOW AS FUCK WENT TO FRONT END AGAIN
+
+        // if (args.creatorFilter === "ByUser") {
+        //     threads = threads.filter(t => t?.creator === currentUser._id.toString());
+        // } else if (args.creatorFilter === "ToUser") {
+        //     threads = threads.filter(t => t?.creator !== currentUser._id.toString());
+        // }
 
         // --- Step 7: Filter out nulls and sort ---
         return threads

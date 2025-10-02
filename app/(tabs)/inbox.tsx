@@ -10,7 +10,6 @@ import React, { useMemo, useState } from "react";
 import { FlatList, ListRenderItemInfo, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 // --- All Constants and Styles are in this file ---
-
 const COLORS = {
     primary: '#0A84FF',
     white: '#FFFFFF',
@@ -22,32 +21,48 @@ const COLORS = {
 };
 
 export default function InboxScreen() {
-    const { signOut } = useAuth();
+    const { signOut, userId } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
+    const currentUser = useQuery(api.users.getUserByClerkId, userId ? { clerkId: userId } : "skip")
+    
+    
+    // FIX 1: Changed the types to match the backend arguments ('ByUser', 'ToUser').
+    const [activeTab, setActiveTab] = useState<'ByUser' | 'ToUser' | 'all'>('all');
 
-    const allOfferThreads = useQuery(api.offers.getMyOfferThreads);
+    // FIX 2: Replaced the three separate queries with one dynamic query.
+    // This single hook will automatically re-fetch data whenever 'activeTab' changes.
+    const threads = useQuery(api.offers.getMyOfferThreads);
+
+    
 
     // This hook efficiently filters the list only when the data or search query changes.
     const filteredThreads = useMemo(() => {
-        if (!allOfferThreads) {
+        // Use the new 'threads' variable which holds the data for the active tab.
+        if (!threads) {
             return [];
         }
         
-        const validThreads = allOfferThreads.filter(Boolean);
+        let threadsToDisplay = threads
 
-        if (!searchQuery) {
-            return validThreads;
+        if (activeTab === 'ByUser') {
+            threadsToDisplay = threads.filter(t => t.creator === currentUser?._id)
+        } else if (activeTab == "ToUser") {
+            threadsToDisplay = threads.filter(t => t.creator !== currentUser?._id)
         }
 
-        return validThreads.filter(thread => {
+        if (!searchQuery) {
+            return threadsToDisplay;
+        }
+
+        return threadsToDisplay.filter(thread => {
             const query = searchQuery.toLowerCase();
             const usernameMatch = thread.otherUser.username?.toLowerCase().includes(query);
             const productMatch = thread.requestDetails.productName.toLowerCase().includes(query);
             return usernameMatch || productMatch;
         });
-    }, [allOfferThreads, searchQuery]);
+    }, [threads, searchQuery, activeTab, currentUser]);
 
-    if (allOfferThreads === undefined) {
+    if (threads === undefined) {
         return <Loader />;
     }
 
@@ -63,6 +78,31 @@ export default function InboxScreen() {
                 <Text style={styles.headerTitle}>Inbox</Text>
                 <TouchableOpacity onPress={() => signOut()}>
                     <Ionicons name="log-out-outline" size={26} color={COLORS.primary} />
+                </TouchableOpacity>
+            </View>
+            
+            {/* NEW: Tab container and buttons */}
+            <View style={styles.tabContainer}>
+                
+                <TouchableOpacity 
+                    style={[styles.tab, activeTab === 'ByUser' && styles.activeTab]} 
+                    onPress={() => setActiveTab('ByUser')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'ByUser' && styles.activeTabText]}>By Me</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    style={[styles.tab, activeTab === 'all' && styles.activeTab]} 
+                    onPress={() => setActiveTab('all')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>All</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    style={[styles.tab, activeTab === 'ToUser' && styles.activeTab]} 
+                    onPress={() => setActiveTab('ToUser')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'ToUser' && styles.activeTabText]}>To Me</Text>
                 </TouchableOpacity>
             </View>
 
@@ -106,7 +146,6 @@ const NoItemsFound = ({ hasSearch }: { hasSearch: boolean }) => (
 );
 
 // --- All Styles are defined below ---
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -128,13 +167,49 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: COLORS.black,
     },
+    // REPLACED: Modern Segmented Control Styles
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#EFEFF4',
+        borderRadius: 10,
+        marginHorizontal: 16,
+        marginTop: 10,
+        padding: 4,
+        justifyContent: 'space-between',
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 8,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    activeTab: {
+        backgroundColor: COLORS.white,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    tabText: {
+        color: COLORS.grey,
+        fontWeight: '600',
+        fontSize: 15,
+    },
+    activeTabText: {
+        color: COLORS.primary,
+    },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: COLORS.card,
         borderRadius: 10,
         marginHorizontal: 16,
-        marginTop: 16,
+        marginTop: 10,
         paddingHorizontal: 10,
     },
     searchIcon: {
@@ -170,9 +245,3 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
-
-
-
-
-
-
