@@ -40,10 +40,8 @@ const GRADIENTS = {
 
 
 // --- Type Definitions (Unchanged) ---
-type OfferWithSender = Doc<"offers"> & { requesterId: Id<"users"> };
 
-type OfferThread = {
-    _id: string;
+export type OfferThread = {
     requestDetails: { productName: string };
     tripDetails: {
         originCity: string;
@@ -51,10 +49,8 @@ type OfferThread = {
         arrivalDate: string;
     };
     otherUser: { _id?: Id<"users">; username?: string; image?: string };
-    latestOffer: OfferWithSender;
-    offerCount: number;
-    requester: string;
-    traveler: string;
+    negotiation: Doc<"negotiations">;
+    latestOffer: Doc<"offers">;
 };
 
 type OfferThreadItemProps = {
@@ -109,8 +105,8 @@ export default function OfferThreadItem({ thread }: OfferThreadItemProps) {
 
     const offerContext = React.useMemo(() => {
         if (!currentUser) return null;
-        return currentUser._id.toString() === thread.traveler ? 'TRIP' : 'REQUEST';
-    }, [currentUser, thread.traveler]);
+        return currentUser._id.toString() === thread.negotiation.travelerId ? 'TRIP' : 'REQUEST';
+    }, [currentUser, thread.negotiation]);
 
     const isTrip = offerContext === 'TRIP';
 
@@ -122,14 +118,14 @@ export default function OfferThreadItem({ thread }: OfferThreadItemProps) {
     // Borders have been completely removed from this logic.
     const { statusLabel, feeText, statusColor, needsAction, directionIcon } = React.useMemo(() => {
         if (!currentUser) return {};
-        const { latestOffer } = thread;
+        const { negotiation, latestOffer } = thread;
         const didISendLatestOffer = currentUser?._id === latestOffer.senderId;
-        const feeText = `$${latestOffer.proposedFee}`;
+        const feeText = `$${negotiation.proposedFee}`;
 
         let statusLabel = '', statusColor = COLORS.grey;
         let needsAction = false, directionIcon: keyof typeof Ionicons.glyphMap = didISendLatestOffer ? 'arrow-up-circle-outline' : 'arrow-down-circle-outline';
 
-        switch (latestOffer.status) {
+        switch (negotiation.status) {
             case 'pending':
                 if (didISendLatestOffer) {
                     statusLabel = 'Offer Sent';
@@ -156,12 +152,12 @@ export default function OfferThreadItem({ thread }: OfferThreadItemProps) {
                 break;
         }
         return { statusLabel, feeText, statusColor, needsAction, directionIcon };
-    }, [thread.latestOffer, currentUser]);
+    }, [thread, currentUser]);
 
     const handleNavigation = () => {
         router.push({
             pathname: '/(stack)/offers',
-            params: { id: thread._id },
+            params: { id: thread.negotiation._id },
         });
     };
 

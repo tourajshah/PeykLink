@@ -246,6 +246,28 @@ export const getMyMatchingTrips = query({
             )
             .collect();
 
-        return matchingTrips
+        return matchingTrips        
     }
 })
+
+
+// export const getMyMatchingRequests = query({
+//     args: {},
+//     handler: async (ctx) => {
+//         const currentUser = await getAuthenticatedUser(ctx);
+//         if (!currentUser) {
+//             return []
+//         }
+
+//         const myTrips = await ctx.db 
+//           .query("trips")
+//           .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
+//           .order('desc')
+//           .collect();
+
+//         const matchingRequests = await ctx.db
+//           .query('requests')
+          
+            
+//     }
+// })

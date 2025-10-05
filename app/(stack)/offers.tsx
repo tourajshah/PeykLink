@@ -9,6 +9,7 @@ import React, { useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView, // Import KeyboardAvoidingView
     Linking,
     Modal,
     Platform,
@@ -21,21 +22,23 @@ import {
     View
 } from 'react-native';
 
+import { MessageInput } from '@/components/Message';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
+
 
 export default function OfferDetailScreen() {
     const router = useRouter();
     const { userId } = useAuth();
     const params = useLocalSearchParams();
-    const requestId = params.id as Id<"requests">;
+    const negotiationId = params.id as Id<"negotiations">;
     
     // --- All Hooks are now grouped at the top level ---
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [negotiateModalVisible, setNegotiateModalVisible] = useState(false);
     const [newFee, setNewFee] = useState('');
 
-    const threadData = useQuery(api.offers.getOfferThreadDetails, { requestId });
+    const threadData = useQuery(api.offers.getOfferThreadDetails, { negotiationId });
     const currentUser = useQuery(api.users.getUserByClerkId, userId ? { clerkId: userId } : "skip");
     
     const acceptOffer = useMutation(api.offers.acceptOffer);
@@ -43,7 +46,12 @@ export default function OfferDetailScreen() {
     const cancelOffer = useMutation(api.offers.cancelOffer);
     const createCounterOffer = useMutation(api.offers.createCounterOffer);
 
-    // ✅ --- FIX: useMemo is now here, at the top level with all other hooks ---
+    const latestOfferForQuery = threadData?.offers?.[threadData.offers.length - 1];
+    const messages = useQuery(
+        api.messages.getMessages,
+        threadData?.negotiation.status === 'accepted' ? { negotiationId : threadData.negotiation._id } : "skip"
+    );
+
     // This hook will now run on every render, which is the correct pattern.
     const { iAmTheRequester, wasLatestOfferSentByMe, isNegotiationActive, finalStatusMessage } = useMemo(() => {
         // This internal guard safely handles initial renders when data is not yet available.
@@ -52,14 +60,17 @@ export default function OfferDetailScreen() {
         }
         const { offers, requester, traveler } = threadData;
         const latestOffer = offers[offers.length - 1];
+
+        // QUERY WILL RUN IF STATUS IS ACCEPTED/PAID IF NOT IT WILL SKIP
+
         const iAmTheRequester = currentUser._id === requester._id;
         const wasLatestOfferSentByMe = currentUser._id === latestOffer.senderId;
-        const isNegotiationActive = latestOffer.status === 'pending';
+        const isNegotiationActive = threadData.negotiation.status === 'pending';
         let finalStatusMessage = '';
         if (!isNegotiationActive) {
             const actionTaker = latestOffer.senderId === requester._id ? traveler : requester;
             const actionTakerName = actionTaker._id === currentUser._id ? "You" : actionTaker.username;
-            finalStatusMessage = `${actionTakerName} ${latestOffer.status} this offer.`;
+            finalStatusMessage = `${actionTakerName} ${threadData.negotiation.status} this offer.`;
         }
         return { iAmTheRequester, wasLatestOfferSentByMe, isNegotiationActive, finalStatusMessage };
     }, [currentUser, threadData]);
@@ -77,18 +88,18 @@ export default function OfferDetailScreen() {
             </View>
         );
     }
-    if (threadData === null || !threadData.requester || !threadData.traveler || !threadData.trip) {
+    if (threadData === null || !threadData.requester || !threadData.traveler || !threadData.trip || !threadData.negotiation || !threadData.request ) {
         return (
             <View style={styles.loadingContainer}>
                 <Ionicons name="alert-circle-outline" size={60} color={COLORS.error} />
                 <Text style={styles.errorText}>Offer data could not be loaded.</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.errorButton}><Text style={styles.buttonTextPrimary}>Go Back</Text></TouchableOpacity>
             </View>
-        );        
+        );      
     }
 
     // --- Data is now guaranteed to be valid ---
-    const { request, offers, requester, traveler, trip } = threadData;
+    const { request, offers, requester, traveler, trip, negotiation } = threadData;
     const latestOffer = offers[offers.length - 1];
 
     // --- Fully Implemented Event Handlers ---
@@ -101,7 +112,7 @@ export default function OfferDetailScreen() {
         }
         setIsSubmitting(true);
         try {
-            await createCounterOffer({ requestId: request._id, newFee: fee });
+            await createCounterOffer({ negotiationId: negotiation._id, newFee: fee });
             setNegotiateModalVisible(false);
             setNewFee('');
         } catch (error) {
@@ -144,7 +155,7 @@ export default function OfferDetailScreen() {
         if (!currentUser) return;
         setIsSubmitting(true);
         try {
-            await cancelOffer({ requestId: request._id });
+            await cancelOffer({ offerId: latestOffer._id });
             Alert.alert("Request Cancelled", "You have cancelled this request.", [{ text: "OK", onPress: () => router.back() }]);
         } catch (error) {
             Alert.alert("Error", "Could not cancel the request.", [{ text: "OK" }]);
@@ -155,7 +166,11 @@ export default function OfferDetailScreen() {
     }
     
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} disabled={isSubmitting}><Ionicons name="close-outline" size={32} color={COLORS.text} /></TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>{request.productName}</Text>
@@ -189,26 +204,76 @@ export default function OfferDetailScreen() {
                 <View style={styles.historyContainer}>
                     {offers.map((offer) => {
                         const isMe = offer.senderId === currentUser._id;
+                        const senderImage = isMe ? currentUser.imageURL : (iAmTheRequester ? traveler.imageURL : requester.imageURL);
+                        
+                        const BubbleContent = (
+                            <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
+                                <Text style={styles.bubbleFee}>${offer.proposedFee.toFixed(2)}</Text>
+                                <Text style={styles.bubbleTime}>{formatRelativeTime(offer._creationTime)}</Text>
+                            </View>
+                        );
+                        
+                        const Avatar = <Image source={senderImage} style={styles.bubbleAvatar} />;
+
                         return (
                             <View key={offer._id} style={[styles.bubbleContainer, isMe ? styles.myBubbleContainer : styles.theirBubbleContainer]}>
-                                <Image source={isMe ? currentUser.imageURL : (iAmTheRequester ? traveler.imageURL : requester.imageURL)} style={styles.bubbleAvatar} />
-                                <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
-                                    <Text style={styles.bubbleFee}>${offer.proposedFee.toFixed(2)}</Text>
-                                    <Text style={styles.bubbleTime}>{formatRelativeTime(offer._creationTime)}</Text>
-                                </View>
+                                {isMe ? (
+                                    <>
+                                        {BubbleContent}
+                                        {Avatar}
+                                    </>
+                                ) : (
+                                    <>
+                                        {Avatar}
+                                        {BubbleContent}
+                                    </>
+                                )}
                             </View>
                         );
                     })}
                 </View>
+
+                {/* DISPLAY CHAT MESSAGE IF OFFER IS ACCEPTED */}
+                {negotiation.status === 'accepted' && messages && (
+                    <>
+                        <Text style={styles.historyTitle}>Chat</Text>
+                        <View style={styles.historyContainer}>
+                            {messages.map((msg) =>{
+                                const isMe = msg.senderId === currentUser._id;
+                                const sender = isMe ? currentUser : (iAmTheRequester ? traveler : requester);
+
+                                const BubbleContent = (
+                                    <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, styles.chatBubble]}>
+                                        <Text style={styles.chatText}>{msg.message}</Text>
+                                        <Text style={styles.bubbleTime}>{formatRelativeTime(msg._creationTime)}</Text>
+                                    </View>
+                                );
+
+                                const Avatar = <Image source={sender.imageURL} style={styles.bubbleAvatar} />;
+
+                                return (
+                                    <View key={msg._id} style={[styles.bubbleContainer, isMe ? styles.myBubbleContainer : styles.theirBubbleContainer]}>
+                                        {isMe ? (
+                                            <>
+                                                {BubbleContent}
+                                                {Avatar}
+                                            </>
+                                        ) : (
+                                            <>
+                                                {Avatar}
+                                                {BubbleContent}
+                                            </>
+                                        )}
+                                    </View>
+                                )
+                            })}
+                        </View>
+                    </>
+                )}
             </ScrollView>
 
             <View style={styles.footer}>
-                {!isNegotiationActive ? (
-                    <View style={[styles.statusBanner, latestOffer.status === 'accepted' ? styles.statusBannerAccepted : styles.statusBannerRejected]}>
-                        <Ionicons name={latestOffer.status === 'accepted' ? "checkmark-circle" : "close-circle"} size={20} color={COLORS.text} />
-                        <Text style={styles.statusBannerText}>{finalStatusMessage}</Text>
-                    </View>
-                ) : (
+                {negotiation.status === 'pending' ? (
                     iAmTheRequester ? (
                         <>
                             <TouchableOpacity style={[styles.button, styles.buttonSecondary, (wasLatestOfferSentByMe || isSubmitting) && styles.buttonDisabled]} disabled={wasLatestOfferSentByMe || isSubmitting} onPress={handleCancel}><Text style={styles.buttonTextSecondary}>Cancel</Text></TouchableOpacity>
@@ -222,6 +287,15 @@ export default function OfferDetailScreen() {
                             <TouchableOpacity style={[styles.button, styles.buttonPrimary, (wasLatestOfferSentByMe || isSubmitting) && styles.buttonDisabled]} disabled={wasLatestOfferSentByMe || isSubmitting} onPress={handleAccept}><Text style={styles.buttonTextPrimary}>Accept</Text></TouchableOpacity>
                         </>
                     )
+                ) : negotiation.status === 'accepted' ? (
+                    // OFFER IS ACCEPTED / PAID , SHOW CHAT INPUT AND AREA
+                    <MessageInput negotiationId={negotiation._id} />
+                ) : (
+                    // OFFER IS REJECTED / CANCELED , SHOW FINAL STATUS
+                    <View style={[styles.statusBanner, styles.statusBannerRejected]}>
+                        <Ionicons name={"close-circle"} size={20} color={COLORS.text} />
+                        <Text style={styles.statusBannerText}>{finalStatusMessage}</Text>
+                    </View>
                 )}
             </View>
             
@@ -239,7 +313,7 @@ export default function OfferDetailScreen() {
                     </Pressable>
                 </Pressable>
             </Modal>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -294,7 +368,23 @@ const styles = StyleSheet.create({
     theirBubble: { backgroundColor: COLORS.theirBubble, borderBottomLeftRadius: 4 },
     bubbleFee: { color: COLORS.text, fontSize: 18, fontWeight: 'bold' },
     bubbleTime: { color: COLORS.text, fontSize: 12, opacity: 0.7, marginTop: 4, alignSelf: 'flex-end' },
-    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', padding: 16, paddingBottom: Platform.OS === 'ios' ? 30 : 16, backgroundColor: COLORS.contentBackground, borderTopWidth: 1, borderTopColor: COLORS.separator, gap: 10 },
+    chatBubble: {
+        paddingVertical: 8,
+    },
+    chatText: {
+        color: COLORS.text,
+        fontSize: 16,
+    },
+    footer: {
+        // The footer is no longer absolutely positioned, KeyboardAvoidingView handles it
+        flexDirection: 'row',
+        padding: 6,
+        paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+        backgroundColor: COLORS.contentBackground,
+        borderTopWidth: 0,
+        borderTopColor: COLORS.separator,
+        gap: 10
+    },
     statusBanner: { flex: 1, height: 52, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     statusBannerAccepted: { backgroundColor: COLORS.green },
     statusBannerRejected: { backgroundColor: COLORS.red },

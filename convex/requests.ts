@@ -264,15 +264,20 @@ export const createDirectRequestAndOffer = mutation({
         });
 
         // --- PART 2: Create the Initial Offer ---
-        await ctx.db.insert("offers", {
+        const negotiationId = await ctx.db.insert("negotiations", {
             requestId: requestId,
             tripId: args.tripId,
             requesterId: currentUser._id,
             travelerId: args.targetedTravelerId,
-            proposedFee: args.travelerFee, // The initial offer uses the fee from the form
-            senderId: currentUser._id,
+            proposedFee: args.travelerFee,
             creatorId: currentUser._id,
             status: "pending",
+        });
+
+        const offerId = await ctx.db.insert("offers", {
+            threadId: negotiationId,
+            proposedFee: args.travelerFee, 
+            senderId: currentUser._id,
         });
 
         // Return the new requestId so we can navigate if needed

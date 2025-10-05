@@ -49,12 +49,12 @@ export default defineSchema({
 
     }).index("by_travelerId", ["travelerId"]),
 
-    offers: defineTable({
+    negotiations: defineTable({
         requestId: v.id("requests"), // The item being requested (The "What")
+        requesterId: v.id("users"),  // who wants the item        
         tripId: v.id("trips"),       // The trip used for delivery (The "How")
         travelerId: v.id("users"),   // whom delivers the item
-        requesterId: v.id("users"),  // who wants the item        
-        senderId: v.id("users"),     // who made this specific offer.
+        creatorId: v.id("users"),     // who made this specific offer.
         proposedFee: v.number(), //  represents the negotiated amount.
 
         // Status tracks the negotiation process
@@ -63,14 +63,20 @@ export default defineSchema({
             v.literal("accepted"),  // Requester accepted, ready for payment
             v.literal("rejected"),  // Requester rejected the offer
             v.literal("cancelled")  // Offer withdrawn by the traveler
-        ),
-
-        // Optional message from the traveler/requester with their offer
-        creatorId: v.id("users"),
+        ),        
 
     }).index("by_requestId", ["requestId"])
-      .index("by_tripId", ["tripId"]),
+      .index("by_tripId", ["tripId"])
+      .index('by_creatorId', ["creatorId"]),
 
+      // MADE NEGOTIATION AS CHILD OF OFFER TO INHERITE THEN PATCH OFFER , FOR COUNTER OFFERS
+
+    offers: defineTable({
+        threadId: v.id("negotiations"), // The item being requested (The "What")
+        senderId: v.id("users"),     // who made this specific offer.
+        proposedFee: v.number(), //  represents the negotiated amount.
+
+    }).index("by_threadId", ["threadId"]),
 
     // CREATED WHEN AN OFFER IS ACCEPTED AND PAID
     orders: defineTable({
@@ -113,4 +119,12 @@ export default defineSchema({
         comment: v.optional(v.string()),
     }).index("by_orderId", ["orderId"])
       .index("by_revieweeId", ["revieweeId"]),
+
+
+    messages: defineTable({
+        negotiationId: v.id("negotiations"), // The offer that is accepted
+        senderId: v.id("users"),     // who made sent the message.
+        message: v.string(),
+
+    }).index("by_negotiationId", ["negotiationId"]),
 });

@@ -1,7 +1,7 @@
 // app/(tabs)/inbox.tsx
 
 import { Loader } from "@/components/Loader";
-import OfferThreadItem from "@/components/Offer";
+import OfferThreadItem, { OfferThread } from "@/components/Offer";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,9 +45,9 @@ export default function InboxScreen() {
         let threadsToDisplay = threads
 
         if (activeTab === 'ByUser') {
-            threadsToDisplay = threads.filter(t => t.creator === currentUser?._id)
+            threadsToDisplay = threads.filter(t => t.negotiation.creatorId === currentUser?._id)
         } else if (activeTab == "ToUser") {
-            threadsToDisplay = threads.filter(t => t.creator !== currentUser?._id)
+            threadsToDisplay = threads.filter(t => t.negotiation.creatorId !== currentUser?._id)
         }
 
         if (!searchQuery) {
@@ -68,7 +68,7 @@ export default function InboxScreen() {
 
     type OfferThreadType = (typeof filteredThreads)[number];
 
-    const renderOfferThread = ({ item }: ListRenderItemInfo<OfferThreadType>) => {
+    const renderOfferThread = ({ item }: ListRenderItemInfo<OfferThread>) => {
         return <OfferThreadItem thread={item} />;
     };
 
@@ -120,7 +120,7 @@ export default function InboxScreen() {
             <FlatList
                 data={filteredThreads}
                 renderItem={renderOfferThread}
-                keyExtractor={(item) => item._id}
+                keyExtractor={(item) => item.negotiation._id}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContainer}
                 ListEmptyComponent={<NoItemsFound hasSearch={searchQuery.length > 0} />}

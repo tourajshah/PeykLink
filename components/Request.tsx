@@ -133,13 +133,15 @@ export default function Request({request}: RequestProps) {
         
         const tripIdforOffer = myMatchingTrips[0]._id;
         try {
-            const offerId = await createInitialOffer({
+            const result = await createInitialOffer({
                 requestId: request._id,
                 tripId: tripIdforOffer,
                 proposedFee: fee,
             });
-            setOfferModalVisible(false);
-            router.push({ pathname: '/(stack)/offers', params: { id: offerId } });
+            if (result && result.negotiationId) {
+                setOfferModalVisible(false);
+                router.push({ pathname: '/(stack)/offers', params: { id: result.negotiationId } });
+            }
         } catch (error) {
             Alert.alert("Error", (error as Error).message || "Could not send offer.");
         } finally {
