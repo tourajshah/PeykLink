@@ -348,6 +348,26 @@ export const createInitialOffer = mutation({
           throw new Error("Trip not found");
         }
 
+        const checkDuplicateNegotiation = await ctx.db
+            .query('negotiations')
+            .withIndex("by_tripId", (q) => q.eq("tripId", args.tripId))
+            .filter((q) =>
+                q.and(
+                    q.eq(q.field("requestId"), args.requestId),
+                    q.and(q.neq(q.field("status"), "rejected"), q.neq(q.field("status"), "cancelled"))
+                )
+            )
+            .collect()
+                
+        if(checkDuplicateNegotiation.length > 0){
+            return {
+                success: false,
+                reason: "DUPLICATE_OFFER",
+                negotiationId: checkDuplicateNegotiation[0]._id
+            }
+        }
+
+
         const negotiationId = await ctx.db.insert("negotiations", {
             requestId: args.requestId,
             tripId: args.tripId,
@@ -365,7 +385,10 @@ export const createInitialOffer = mutation({
         });
 
         // Return the new requestId so we can navigate if needed
-        return {negotiationId}
+        return {
+            success: true,
+            negotiationId
+        }
     },
 });
 

@@ -62,7 +62,9 @@ export default defineSchema({
             v.literal("pending"),   // Traveler has made the offer, awaiting requester action
             v.literal("accepted"),  // Requester accepted, ready for payment
             v.literal("rejected"),  // Requester rejected the offer
-            v.literal("cancelled")  // Offer withdrawn by the traveler
+            v.literal("paid"),  // Offer withdrawn by the traveler
+            v.literal("cancelled"),  // Offer withdrawn by the traveler
+            v.literal("completed")
         ),        
 
     }).index("by_requestId", ["requestId"])
@@ -80,36 +82,38 @@ export default defineSchema({
 
     // CREATED WHEN AN OFFER IS ACCEPTED AND PAID
     orders: defineTable({
-        // IDs to link everything together
+        negotiationId: v.id("negotiations"),
         requestId: v.id("requests"),
-        tripId: v.id("trips"),
-        offerId: v.id("offers"), // The specific offer that was accepted
-        travelerId: v.id("users"),
         requesterId: v.id("users"),
-
-        // Final financial details at the time of payment
-        finalItemPrice: v.number(),
-        finalTravelerFee: v.number(), // from the accepted offer
-        finalAppFee: v.number(),
-        totalAmountPaid: v.number(),
-
-        // Status tracks the entire lifecycle of the confirmed deal
-        status: v.union(
-            v.literal("awaiting_payment"),
-            v.literal("awaiting_purchase"), // Paid, traveler needs to buy the item
-            v.literal("in_transit"),        // Traveler has the item and is traveling
-            v.literal("delivered"),         // Awaiting confirmation from requester
-            v.literal("completed"),         // Confirmed and money released
-            v.literal("disputed"),          // A problem was reported
-            v.literal("cancelled")          // Order cancelled
+        travelerId: v.id("users"),
+        
+        // Financial
+        itemPrice: v.number(),
+        travelerFee: v.number(),
+        totalAmount: v.number(),
+        
+        // Status
+        paymentStatus: v.union(
+            v.literal("pending"),
+            v.literal("paid"),
+            v.literal("completed"),
+            v.literal("disputed"),
+            v.literal("refunded")
         ),
         
-        // For delivery confirmation
-        confirmationCode: v.optional(v.string()), // Secure code shown to requester or traveler
-        paymentId: v.optional(v.string()),        // ID from your payment provider
+        // Security
+        deliveryCode: v.string(),     // HASHED 6-digit code
+        codeAttempts: v.number(),     // Failed verification attempts
+        codeUsedAt: v.optional(v.number()),
         
-    }).index("by_travelerId", ["travelerId"])
-      .index("by_requesterId", ["requesterId"]),
+        // Timestamps
+        paidAt: v.optional(v.number()),
+        completedAt: v.optional(v.number()),
+        
+    }).index("by_negotiation", ["negotiationId"])
+    .index("by_requester", ["requesterId"])
+    .index("by_traveler", ["travelerId"])
+    .index("by_payment_status", ["paymentStatus"]),
 
     reviews: defineTable({
         orderId: v.id("orders"),

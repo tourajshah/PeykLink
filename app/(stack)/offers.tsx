@@ -40,6 +40,12 @@ export default function OfferDetailScreen() {
 
     const threadData = useQuery(api.offers.getOfferThreadDetails, { negotiationId });
     const currentUser = useQuery(api.users.getUserByClerkId, userId ? { clerkId: userId } : "skip");
+    const order = useQuery(
+        api.orders.getOrderByNegotiation,
+        threadData?.negotiation.status === 'paid' 
+            ? { negotiationId: threadData.negotiation._id } 
+            : "skip"
+    );
     
     const acceptOffer = useMutation(api.offers.acceptOffer);
     const rejectOffer = useMutation(api.offers.rejectOffer);
@@ -49,7 +55,7 @@ export default function OfferDetailScreen() {
     const latestOfferForQuery = threadData?.offers?.[threadData.offers.length - 1];
     const messages = useQuery(
         api.messages.getMessages,
-        threadData?.negotiation.status === 'accepted' ? { negotiationId : threadData.negotiation._id } : "skip"
+        threadData?.negotiation.status === 'paid' ? { negotiationId : threadData.negotiation._id } : "skip"
     );
 
     // This hook will now run on every render, which is the correct pattern.
@@ -128,7 +134,10 @@ export default function OfferDetailScreen() {
         setIsSubmitting(true);
         try {
             await acceptOffer({ offerId: latestOffer._id });
-            Alert.alert("Offer Accepted!", "The transaction is now confirmed.", [{ text: "OK", onPress: () => router.back() }]);
+            // router.push({
+            //     pathname: '/(stack)/payment',
+            //     params: { negotiationId: threadData.negotiation._id }
+            // })
         } catch (error) {
             Alert.alert("Error", "Could not accept the offer.", [{ text: "OK" }]);
             console.error(error);
@@ -164,7 +173,7 @@ export default function OfferDetailScreen() {
             setIsSubmitting(false);
         }
     }
-    
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -231,10 +240,27 @@ export default function OfferDetailScreen() {
                             </View>
                         );
                     })}
+
+                    
+
                 </View>
 
-                {/* DISPLAY CHAT MESSAGE IF OFFER IS ACCEPTED */}
-                {negotiation.status === 'accepted' && messages && (
+                
+                {iAmTheRequester && negotiation.status === 'accepted' && (
+                    <TouchableOpacity
+                        style={styles.floatingConfirmButton}
+                        onPress={() => router.push({
+                            pathname: '/(stack)/payment',
+                            params: { negotiationId: threadData.negotiation._id }
+                        })}
+                    >
+                        <Text>OFFER IS ACCEPTED. PAY TO BE ABLE TO CHAT WITH TRAVELER AND TRAVELER STARTS DOING THEIR PART OF THE DEAL</Text>
+                    </TouchableOpacity>
+                )}
+
+
+                {/* DISPLAY CHAT MESSAGE IF OFFER IS PAID */}
+                {negotiation.status === 'paid' && messages && (
                     <>
                         <Text style={styles.historyTitle}>Chat</Text>
                         <View style={styles.historyContainer}>
@@ -267,7 +293,23 @@ export default function OfferDetailScreen() {
                                     </View>
                                 )
                             })}
+
+                            {currentUser._id === negotiation.travelerId && negotiation.status === 'paid' && (
+                            <TouchableOpacity
+                                style={styles.floatingConfirmButton}
+                                onPress={() => router.push({
+                                    pathname: '/(stack)/confirm-delivery',
+                                    params: { negotiationId: negotiation._id }
+                                })}
+                            >
+                                <Text>Confirm Delivery</Text>
+                            </TouchableOpacity>
+                            )}
+
                         </View>
+
+                        
+
                     </>
                 )}
             </ScrollView>
@@ -287,7 +329,7 @@ export default function OfferDetailScreen() {
                             <TouchableOpacity style={[styles.button, styles.buttonPrimary, (wasLatestOfferSentByMe || isSubmitting) && styles.buttonDisabled]} disabled={wasLatestOfferSentByMe || isSubmitting} onPress={handleAccept}><Text style={styles.buttonTextPrimary}>Accept</Text></TouchableOpacity>
                         </>
                     )
-                ) : negotiation.status === 'accepted' ? (
+                ) : negotiation.status === 'paid' ? (
                     // OFFER IS ACCEPTED / PAID , SHOW CHAT INPUT AND AREA
                     <MessageInput negotiationId={negotiation._id} />
                 ) : (
@@ -402,4 +444,13 @@ const styles = StyleSheet.create({
     dollarSign: { color: COLORS.text, fontSize: 24, fontWeight: 'bold', marginRight: 4 },
     modalInput: { flex: 1, color: COLORS.text, fontSize: 24, fontWeight: 'bold', height: 50 },
     modalButton: { height: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.primary },
+    floatingConfirmButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+    marginHorizontal: 16,
+},
 });

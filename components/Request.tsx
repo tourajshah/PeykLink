@@ -13,6 +13,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, LayoutAnimation, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CountryFlag from "react-native-country-flag";
 import Animated, { FadeIn } from 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
+
+
 
 
 const COLORS = {
@@ -138,9 +141,18 @@ export default function Request({request}: RequestProps) {
                 tripId: tripIdforOffer,
                 proposedFee: fee,
             });
-            if (result && result.negotiationId) {
+            if (result.success && result.negotiationId) {
                 setOfferModalVisible(false);
                 router.push({ pathname: '/(stack)/offers', params: { id: result.negotiationId } });
+            } else if (result.reason === "DUPLICATE_OFFER") {
+                setOfferModalVisible(false)
+                setIsSubmitting(false)
+                Toast.show({
+                    type:'info',
+                    text1:'You Already Have an Offer',
+                    text2:'You can view your existing offer in the inbox.',
+
+                })
             }
         } catch (error) {
             Alert.alert("Error", (error as Error).message || "Could not send offer.");
