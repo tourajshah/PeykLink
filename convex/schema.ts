@@ -116,12 +116,12 @@ export default defineSchema({
     .index("by_payment_status", ["paymentStatus"]),
 
     reviews: defineTable({
-        orderId: v.id("orders"),
+        negotiationId: v.id("negotiations"),
         reviewerId: v.id("users"),
         revieweeId: v.id("users"),
         rating: v.number(),
         comment: v.optional(v.string()),
-    }).index("by_orderId", ["orderId"])
+    }).index("by_negotiationId", ["negotiationId"])
       .index("by_revieweeId", ["revieweeId"]),
 
 

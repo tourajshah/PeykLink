@@ -2,6 +2,7 @@
 
 import { Loader } from "@/components/Loader";
 import OfferThreadItem, { OfferThread } from "@/components/Offer";
+import ReviewPrompt from "@/components/Review";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,6 +35,9 @@ export default function InboxScreen() {
     const threads = useQuery(api.offers.getMyOfferThreads);
 
     
+    const notReviewedNegotiations = useQuery(api.reviews.getNotReviewedNegotiations)
+    
+
 
     // This hook efficiently filters the list only when the data or search query changes.
     const filteredThreads = useMemo(() => {
@@ -74,6 +78,11 @@ export default function InboxScreen() {
 
     return (
         <View style={styles.container}>
+
+            {notReviewedNegotiations && notReviewedNegotiations.length > 0 && (
+                <ReviewPrompt negotiation={notReviewedNegotiations[0]} />
+            )}
+
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Inbox</Text>
                 <TouchableOpacity onPress={() => signOut()}>

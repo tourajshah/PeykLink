@@ -1,4 +1,5 @@
 import { Loader } from '@/components/Loader';
+import ReviewItem from '@/components/ReviewItem';
 import { COLORS } from '@/constants/theme';
 import { api } from '@/convex/_generated/api';
 import { styles } from '@/styles/profile.styles';
@@ -7,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from 'convex/react';
 import { Image } from "expo-image";
 import React, { useEffect, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export default function Profile() {
 
@@ -19,6 +20,7 @@ export default function Profile() {
   
 
   const currentUser = useQuery(api.users.getUserByClerkId, userId ? { clerkId: userId } : "skip")
+  const reviews = useQuery(api.reviews.getUserReviews)
 
   const [editedProfile, setEditedProfile] = useState({
     fullname: currentUser?.fullname || "",
@@ -103,19 +105,24 @@ export default function Profile() {
 
         {/* ADD REVIEWS OF THE USER HERE , AND MAKE A FUNC*/}
 
-        {/* <FlatList
+        <FlatList
           data={reviews}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-
-            source=
-            style=
-            contentFit=""
-            transition={200}
-
+          scrollEnabled={false} // Keeps the ScrollView in control
+          keyExtractor={(item) => item.review._id}
+          renderItem={({ item }) => <ReviewItem item={item} />} // This is the "recipe"
+          ListHeaderComponent={() => (
+            // Adds a title above the reviews list
+            reviews && reviews.length > 0 ? (
+               <Text style={styles.reviewsTitle}>What Others Are Saying</Text>
+            ) : null
           )}
-        /> */}
-
+          ListEmptyComponent={() => (
+            // Shows a message if there are no reviews
+            <View style={styles.emptyReviewsContainer}>
+                <Text style={styles.emptyReviewsText}>No reviews yet.</Text>
+            </View>
+          )}
+        />
       </ScrollView>
 
       {/* EDIT PROFILE MODAL */}

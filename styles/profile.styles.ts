@@ -239,4 +239,20 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.white,
   },
+  reviewsTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginHorizontal: 16,
+        marginBottom: 10,
+        marginTop: 20,
+    },
+    emptyReviewsContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+    },
+    emptyReviewsText: {
+        color: '#64748b',
+        fontSize: 16,
+    },
 });

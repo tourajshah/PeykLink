@@ -19,7 +19,7 @@ export const sendMessage = mutation ({
             throw new Error ("You are not authorized to post in this chat.")
         }
 
-        if (negotiation.status !== "accepted") {
+        if (negotiation.status !== "accepted" && negotiation.status !== "paid") {
             throw new Error("You can only chat on accepted and paid offer.");
         }
 

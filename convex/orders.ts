@@ -203,6 +203,10 @@ export const confirmDelivery = mutation({
         await ctx.db.patch(order.requestId, {
             status: "completed",
         });
+        // UPDATE PARENT NEGOTIATION 
+        await ctx.db.patch(order.negotiationId, {
+            status: "completed"
+        })
         
         // TODO: Trigger review notifications here
         
