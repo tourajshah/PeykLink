@@ -40,13 +40,16 @@ export const getNotReviewedNegotiations = query({
 }) 
 
 export const getUserReviews = query({
-  handler: async (ctx) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+  args: {
+    id: v.id("users")
+  },
+
+  handler: async (ctx, args) => {
 
     // 1. Get the raw reviews for the current user
     const reviews = await ctx.db
       .query("reviews")
-      .withIndex("by_revieweeId", (q) => q.eq("revieweeId", currentUser._id))
+      .withIndex("by_revieweeId", (q) => q.eq("revieweeId", args.id))
       .order("desc") // Show newest reviews first
       .collect();
     

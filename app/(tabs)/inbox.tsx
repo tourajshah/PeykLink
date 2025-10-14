@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'android' ? 40 : 50,
+        paddingTop: Platform.OS === 'android' ? 12 : 24,
         paddingBottom: 10,
         backgroundColor: COLORS.card,
         borderBottomWidth: StyleSheet.hairlineWidth,

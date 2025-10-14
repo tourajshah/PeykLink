@@ -7,13 +7,17 @@ import React, { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView, // <-- Keep this one
     Platform,
+    ScrollView, // <-- Added ScrollView
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+// --- FIX: Import SafeAreaView from the correct library ---
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
@@ -21,25 +25,30 @@ import { Id } from '@/convex/_generated/dataModel';
 export default function ConfirmDeliveryScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
-    const negotiationId = params.negotiationId as Id<"negotiations">;   
+    const negotiationId = params.negotiationId as Id<"negotiations">;
     
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const inputRefs = useRef<(TextInput | null)[]>([]);
     
     const confirmDelivery = useMutation(api.orders.confirmDelivery);
+    
     const orderData = useQuery(api.orders.getOrderByNegotiation, { negotiationId });
+    const offerDetails = useQuery(api.offers.getOfferThreadDetails, { negotiationId });
 
-        if (!orderData) {
-            return (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                </View>
-            );
-        }
+    if (!orderData || !offerDetails) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+        );
+    }
     
     const handleCodeChange = (value: string, index: number) => {
-        if (value.length > 1) return; // Prevent multiple digits
+        // Only allow numeric input
+        if (value && !/^[0-9]$/.test(value)) {
+            return;
+        }
         
         const newCode = [...code];
         newCode[index] = value;
@@ -51,7 +60,9 @@ export default function ConfirmDeliveryScreen() {
         }
         
         // Auto-submit when complete
-        if (index === 5 && value) {
+        const isComplete = newCode.every(digit => digit !== '');
+        if (isComplete) {
+            inputRefs.current[index]?.blur();
             handleSubmit(newCode.join(''));
         }
     };
@@ -66,7 +77,8 @@ export default function ConfirmDeliveryScreen() {
         const codeString = fullCode || code.join('');
         
         if (codeString.length !== 6) {
-            Alert.alert("Invalid Code", "Please enter all 6 digits");
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert("Invalid Code", "Please enter all 6 digits.");
             return;
         }
         
@@ -85,7 +97,7 @@ export default function ConfirmDeliveryScreen() {
                 "Delivery confirmed. Funds have been released to your account.",
                 [
                     { 
-                        text: "OK", 
+                        text: "Awesome!", 
                         onPress: () => router.replace('/(tabs)/inbox')
                     }
                 ]
@@ -100,7 +112,7 @@ export default function ConfirmDeliveryScreen() {
             Alert.alert(
                 "Incorrect Code",
                 error.message || "Please check the code and try again.",
-                [{ text: "OK" }]
+                [{ text: "Try Again" }]
             );
         } finally {
             setIsSubmitting(false);
@@ -108,64 +120,101 @@ export default function ConfirmDeliveryScreen() {
     };
     
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Confirm Delivery</Text>
-                <View style={{ width: 24 }} />
-            </View>
-            
-            <View style={styles.content}>
-                <View style={styles.iconContainer}>
-                    <Ionicons name="lock-closed" size={60} color={COLORS.primary} />
+        // --- FIX: Using SafeAreaView from react-native-safe-area-context ---
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+            {/* --- FIX: More robust KeyboardAvoidingView setup --- */}
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingContainer}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity 
+                        onPress={() => router.back()}
+                        style={styles.backButton}
+                        disabled={isSubmitting}
+                    >
+                        <Ionicons name="close" size={26} color={COLORS.textPrimary} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Confirm Delivery</Text>
+                    <View style={{ width: 40 }} />
                 </View>
                 
-                <Text style={styles.title}>Enter Delivery Code</Text>
-                <Text style={styles.subtitle}>
-                    Ask the requester for their 6-digit delivery code
-                </Text>
-                
-                <View style={styles.codeInputContainer}>
-                    {code.map((digit, index) => (
-                        <TextInput
-                            key={index}
-                            ref={(ref) => { inputRefs.current[index] = ref; }}
-                            style={[
-                                styles.codeInput,
-                                digit && styles.codeInputFilled,
-                            ]}
-                            value={digit}
-                            onChangeText={(value) => handleCodeChange(value, index)}
-                            onKeyPress={(e) => handleKeyPress(e, index)}
-                            keyboardType="number-pad"
-                            maxLength={1}
-                            autoFocus={index === 0}
-                            editable={!isSubmitting}
-                        />
-                    ))}
-                </View>
-                
-                <View style={styles.infoBox}>
-                    <Ionicons name="information-circle" size={20} color={COLORS.textSecondary} />
-                    <Text style={styles.infoText}>
-                        Once confirmed, funds will be released to your account
-                    </Text>
-                </View>
-            </View>
-        </View>
+                {/* ScrollView makes the content scrollable when keyboard is up */}
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContentContainer}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Order Information Card */}
+                    <View style={styles.orderInfoCard}>
+                        <Ionicons name="wallet-outline" size={38} color={COLORS.primary} style={styles.orderInfoIcon} /> 
+                        <View style={styles.orderInfoTextContainer}>
+                            <Text style={styles.orderInfoLabel}>Receiving funds for:</Text>
+                            <Text style={styles.orderInfoProduct}>{offerDetails.request?.productName}</Text>
+                        </View>
+                    </View>
+                    
+                    {/* Main Interaction Card */}
+                    <View style={styles.card}>
+                        <Ionicons name="key-outline" size={60} color={COLORS.textSecondary} style={{ marginBottom: 16 }} />
+                        <Text style={styles.title}>Enter Delivery Code</Text>
+                        <Text style={styles.subtitle}>
+                            Please ask the requester for the 6-digit code. This confirms delivery and releases your payment!
+                        </Text>
+                        
+                        <View style={[styles.codeInputContainer, isSubmitting && styles.disabled]}>
+                            {code.map((digit, index) => (
+                                <TextInput
+                                    key={index}
+                                    ref={(ref) => { inputRefs.current[index] = ref; }}
+                                    style={[
+                                        styles.codeInput,
+                                        code[index] ? styles.codeInputFilled : null,
+                                        inputRefs.current[index]?.isFocused() && !isSubmitting ? styles.codeInputFocused : null,
+                                    ]}
+                                    value={digit}
+                                    onChangeText={(value) => handleCodeChange(value, index)}
+                                    onKeyPress={(e) => handleKeyPress(e, index)}
+                                    keyboardType="number-pad"
+                                    maxLength={1}
+                                    autoFocus={index === 0}
+                                    editable={!isSubmitting}
+                                    textContentType="oneTimeCode"
+                                />
+                            ))}
+                        </View>
+
+                        {isSubmitting && <ActivityIndicator style={{ marginTop: 24 }} size="large" color={COLORS.primary} />}
+                    </View>
+                    
+                    {/* Reassured Info Box */}
+                    <View style={styles.infoBox}>
+                        <Ionicons name="sparkles-outline" size={20} color={COLORS.green} />
+                        <Text style={styles.infoText}>
+                            Your payment will be processed immediately after successful confirmation!
+                        </Text>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
+// Styles are largely the same, with one key change for the scroll container
 const COLORS = {
-    primary: '#0A84FF',
-    background: '#000000',
-    contentBackground: '#1C1C1E',
-    card: '#2C2C2E',
-    text: '#FFFFFF',
-    textSecondary: '#AEAEB2',
-    separator: '#38383A',
+    primary: '#007AFF',
+    secondary: '#FFD700',
+    background: '#F2F2F7',
+    card: '#FFFFFF',
+    textPrimary: '#000000',
+    textSecondary: '#8A8A8E',
+    separator: '#E5E5EA',
+    green: '#34C759',
+    red: '#FF3B30',
+    disabled: '#C7C7CC',
+    shadow: 'rgba(0,0,0,0.08)'
 };
 
 const styles = StyleSheet.create({
@@ -173,82 +222,158 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.background,
     },
+    keyboardAvoidingContainer: {
+        flex: 1,
+    },
+    loadingContainer: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: COLORS.background 
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'ios' ? 50 : 20,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.separator,
+        paddingVertical: 12,
+        backgroundColor: COLORS.background,
+    },
+    backButton: {
+        height: 40,
+        width: 40,
+        justifyContent: 'center',
+        alignItems: 'flex-start',
     },
     headerTitle: {
-        color: COLORS.text,
-        fontSize: 18,
-        fontWeight: '600',
+        color: COLORS.textPrimary,
+        fontSize: 20,
+        fontWeight: '700',
     },
-    content: {
-        flex: 1,
+    // --- FIX: Style for ScrollView content ---
+    scrollContentContainer: {
+        flexGrow: 1, // Allows content to grow and center itself
+        justifyContent: 'center', // Centers content vertically
         alignItems: 'center',
-        justifyContent: 'center',
         padding: 20,
+        paddingBottom: 40, // Extra space at the bottom
     },
-    iconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: COLORS.contentBackground,
-        justifyContent: 'center',
+    orderInfoCard: {
+        flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: COLORS.card,
+        borderRadius: 16,
+        padding: 18,
+        marginBottom: 30,
+        width: '100%',
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 15,
+        elevation: 8,
+        borderLeftWidth: 6,
+        borderColor: COLORS.green,
+    },
+    orderInfoIcon: {
+        marginRight: 15,
+    },
+    orderInfoTextContainer: {
+        flex: 1,
+    },
+    orderInfoLabel: {
+        fontSize: 15,
+        color: COLORS.textSecondary,
+        marginBottom: 2,
+    },
+    orderInfoProduct: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: COLORS.textPrimary,
+    },
+    card: {
+        backgroundColor: COLORS.card,
+        borderRadius: 24,
+        padding: 28,
+        width: '100%',
+        alignItems: 'center',
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 10,
         marginBottom: 24,
     },
     title: {
-        color: COLORS.text,
-        fontSize: 24,
+        color: COLORS.textPrimary,
+        fontSize: 26,
         fontWeight: 'bold',
-        marginBottom: 8,
+        marginBottom: 10,
+        textAlign: 'center',
     },
     subtitle: {
         color: COLORS.textSecondary,
-        fontSize: 16,
+        fontSize: 17,
         textAlign: 'center',
-        marginBottom: 40,
+        marginBottom: 36,
+        lineHeight: 24,
+        paddingHorizontal: 10,
     },
     codeInputContainer: {
         flexDirection: 'row',
-        gap: 12,
-        marginBottom: 32,
+        justifyContent: 'space-between',
+        width: '100%',
+        maxWidth: 320,
+        gap: 8,
     },
     codeInput: {
-        width: 50,
+        flex: 1,
         height: 60,
-        backgroundColor: COLORS.contentBackground,
-        borderRadius: 12,
+        backgroundColor: COLORS.background,
+        borderRadius: 14,
         borderWidth: 2,
         borderColor: COLORS.separator,
-        color: COLORS.text,
-        fontSize: 28,
+        color: COLORS.textPrimary,
+        fontSize: 30,
         fontWeight: 'bold',
         textAlign: 'center',
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
     },
     codeInputFilled: {
         borderColor: COLORS.primary,
+        color: COLORS.primary,
+        backgroundColor: `${COLORS.primary}05`,
+    },
+    codeInputFocused: {
+        borderColor: COLORS.primary,
+        transform: [{ scale: 1.05 }],
         backgroundColor: COLORS.card,
+    },
+    disabled: {
+        opacity: 0.4,
     },
     infoBox: {
         flexDirection: 'row',
-        backgroundColor: COLORS.contentBackground,
-        borderRadius: 12,
-        padding: 16,
         alignItems: 'center',
+        padding: 16,
         width: '100%',
+        justifyContent: 'center',
+        backgroundColor: `${COLORS.green}1A`,
+        borderRadius: 12,
+        paddingHorizontal: 20,
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
     },
     infoText: {
-        color: COLORS.textSecondary,
-        fontSize: 14,
-        marginLeft: 12,
+        color: COLORS.green,
+        fontSize: 15,
+        marginLeft: 10,
+        textAlign: 'center',
         flex: 1,
+        fontWeight: '500',
     },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background, padding: 20 },
 });

@@ -1,3 +1,5 @@
+// components/Message.tsx
+
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -5,69 +7,57 @@ import { useMutation } from 'convex/react';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-
-const COLORS = {
-    primary: '#007BFF', // Changed
-    primary_light: '#4DA3FF', // Added
-    primaryMuted: 'rgba(0, 123, 255, 0.2)', // Adjusted to match new primary
-    white: '#FFFFFF', // Unchanged
-    black: '#000000', // Unchanged
-    grey: '#AEAEB2', // Changed
-    lightGrey: '#3A3A3C', // Unchanged
-    dark: '#1C1C1E', // Added
-    background: '#1C1C1E', // Updated to use the new dark color
-    card: '#2C2C2E', // Changed
-    green: '#30D158',
-    greenMuted: 'rgba(48, 209, 88, 0.2)',
-    red: '#FF453A',
-    redMuted: 'rgba(255, 69, 58, 0.2)',
-    gold: '#FFD60A',
-    subtleBackground: '#F2F2F7',
-    subtleBorder: '#E5E5EA',
-    
+const COLORS = { 
+    // ... (Your COLORS object)
+    primary: '#007AFF',
+    background: '#F0F2F5',
+    surface: '#FFFFFF',
+    text: '#1C1C1E',
+    textSecondary: '#6D6D72',
+    separator: '#E5E5EA',
+    disabled: '#D1D1D6',
+    green: '#34C759',
+    red: '#FF3B30',
+    orange: '#FF9500',
+    myBubble: '#007AFF',
+    theirBubble: '#E5E5EA',
+    placeholder: '#C7C7CC',
+    white: '#FFFFFF',
+    error: '#FF3B30'
 };
-
-// SHOULD HAVE OFFER ID , TO KNOW WHERE TO SEND THE MESSAGE
 
 type MessageInputProps = {
     negotiationId: Id<'negotiations'>
 }
 
-
-export const MessageInput = ({ negotiationId } : MessageInputProps) => {
-
-    const [message, setMessage] = useState('')
-    const [isSending, setIsSending] = useState(false)
+export const MessageInput = ({ negotiationId }: MessageInputProps) => {
+    const [message, setMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const sendMessage = useMutation(api.messages.sendMessage);
     const [isUploading, setIsUploading] = useState(false) // FUTURE FILE UPLOAD
     const [showMediaPicker, setShowMediaPicker] = useState(false) // FUTURE MEDIA UPLOAD
 
-    const sendMessage = useMutation(api.messages.sendMessage)
-
     const handleSendMessage = async () => {
-
         if (!message.trim() || isSending) return;
-
-        setIsSending(true)
-
-        try{
-            // CALL MUTATION WITH REQUIRED ARGUMENTS
+        setIsSending(true);
+        try {
             await sendMessage({
                 negotiationId: negotiationId,
                 message: message.trim()
-            })
-            // CLEAR INPUT ON SECCESSFUL SEND
-            setMessage('')
+            });
+            setMessage('');
         } catch (error) {
-            console.error('Failed to send message: ', error)
-            Alert.alert("Error", "Could not send your message. Please try again.")
+            console.error('Failed to send message: ', error);
+            Alert.alert("Error", "Could not send your message. Please try again.");
         } finally {
-            // LOADING STATE IS TURNED OFF
-            setIsSending(false)
+            setIsSending(false);
         }
-
     }
 
+    const isButtonDisabled = !message.trim() || isSending;
+
     return (
+        // NO KeyboardAvoidingView here!
         <View style={styles.container}>
             <View style={styles.inputContainer}>
                 <TextInput
@@ -75,62 +65,65 @@ export const MessageInput = ({ negotiationId } : MessageInputProps) => {
                     onChangeText={setMessage}
                     style={styles.textInput}
                     multiline
-                    numberOfLines={3}
-                    placeholder='Type your message here ...'
-                    placeholderTextColor={COLORS.grey}
+                    placeholder='Message...'
+                    placeholderTextColor={COLORS.placeholder}
                 />
             </View>
-
-
             <TouchableOpacity
-                disabled={!message.trim() || isSending}
-                style={[styles.sendButtonActive, (message.trim().length > 0 && !isSending) ? styles.sendButtonActive : styles.sendButtonDeactive]}
+                disabled={isButtonDisabled}
+                style={[
+                    styles.sendButton,
+                    isButtonDisabled && styles.sendButtonDisabled // Clean conditional style
+                ]}
                 onPress={handleSendMessage}
             >
                 {isSending ? (
-                    <ActivityIndicator size={24} color={COLORS.primary_light} />
+                    <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
                     <MaterialIcons
                         name='send'
-                        size={24}
-                        color={COLORS.primary_light}
+                        size={18} // Adjusted for smaller button
+                        color={COLORS.white} // White icon for better contrast
                     />
                 )}
             </TouchableOpacity>
-        </View>   
-    )
+        </View>
+    );
 }
 
+// The new, sleek, and compact styles
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 20,
-        backgroundColor: COLORS.card,
-        gap: 10,
+        padding: 8,
+        backgroundColor: COLORS.surface,
+        gap: 8,
+        borderTopWidth: 1, // Add a clean separator line
+        borderTopColor: COLORS.separator,
     },
     inputContainer: {
         flex: 1,
         backgroundColor: COLORS.background,
         borderRadius: 20,
-        paddingHorizontal: 12,
+        paddingHorizontal: 16,
         paddingVertical: 8,
-        minHeight: 40,
         justifyContent: 'center',
     },
     textInput: {
-        color: COLORS.white,
-        fontSize: 16,
+        fontSize: 15,
+        color: COLORS.text,
+        maxHeight: 100,
     },
     sendButton: {
-        padding: 4,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: COLORS.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    sendButtonActive: {
-        opacity: 1, // Correct opacity value
-    },
-    sendButtonDeactive: {
-        opacity: 0.5, // Correct opacity value
+    sendButtonDisabled: {
+        backgroundColor: COLORS.disabled,
     },
 });

@@ -124,3 +124,25 @@ export const checkUserHasMatchingTrip = query({
         return matchingTrip !== null;
     }
 })
+
+
+export const getUserStats = query({
+    args: {id: v.id("users")},
+    handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.id)
+        if (!user) {
+            return false
+        }
+
+        const userCompletedOrders = user.completedOrders
+        const userRating = user.rating
+        const userCreationTime = user._creationTime
+
+        return {
+            userCompletedOrders,
+            userRating,
+            userCreationTime
+        }
+
+    }
+})

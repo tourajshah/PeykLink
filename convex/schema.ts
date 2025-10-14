@@ -9,7 +9,7 @@ export default defineSchema({
         email: v.string(),
         bio: v.optional(v.string()),
         imageURL: v.string(),
-        rating: v.optional(v.number()),
+        rating: v.number(),
         clerkId: v.string(),
         completedOrders: v.number(),
     }).index("by_clerk_id", ["clerkId"]),
@@ -104,6 +104,7 @@ export default defineSchema({
         // Security
         deliveryCode: v.string(),     // HASHED 6-digit code
         codeAttempts: v.number(),     // Failed verification attempts
+        encryptedDeliveryCode: v.optional(v.string()),
         codeUsedAt: v.optional(v.number()),
         
         // Timestamps

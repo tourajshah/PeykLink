@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
-    Platform,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -50,7 +50,7 @@ export default function PaymentScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <Ionicons name="alert-circle-outline" size={60} color={COLORS.primary} />
-                <Text>Error in payment.</Text>
+                <Text style={styles.errorText}>Error loading payment details.</Text>
             </View>
         );      
     }
@@ -98,115 +98,96 @@ export default function PaymentScreen() {
     };
     
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity 
                     onPress={() => router.back()} 
                     disabled={isProcessing}
+                    style={styles.backButton}
                 >
-                    <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+                    <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Payment</Text>
-                <View style={{ width: 24 }} />
+                <Text style={styles.headerTitle}>Confirm and Pay</Text>
+                <View style={{ width: 40 }} />
             </View>
             
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Order Summary Card */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Order Summary</Text>
-                    
-                    <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>
-                            {request.productName}
-                        </Text>
-                        <Text style={styles.summaryValue}>
-                            ${request.itemPrice.toFixed(2)}
-                        </Text>
-                    </View>
-                    
-                    <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>
-                            Quantity: {request.quantity}
-                        </Text>
-                        <Text style={styles.summaryValue}>
-                            ${itemTotal.toFixed(2)}
-                        </Text>
-                    </View>
-                    
-                    <View style={styles.separator} />
-                    
-                    <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Delivery Fee</Text>
-                        <Text style={styles.summaryValue}>
-                            ${deliveryFee.toFixed(2)}
-                        </Text>
-                    </View>
-                    
-                    <View style={styles.separator} />
-                    
-                    <View style={styles.summaryRow}>
-                        <Text style={styles.totalLabel}>Total</Text>
-                        <Text style={styles.totalValue}>
-                            ${total.toFixed(2)}
-                        </Text>
-                    </View>
-                </View>
-                
                 {/* Traveler Info Card */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Delivery By</Text>
-                    <View style={styles.travelerInfo}>
-                        <Ionicons name="person-circle" size={40} color={COLORS.primary} />
-                        <View style={styles.travelerDetails}>
-                            <Text style={styles.travelerName}>{traveler.username}</Text>
-                            <Text style={styles.travelerRating}>⭐ 4.8 (12 reviews)</Text>
+                <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>Delivery Partner</Text>
+                    <View style={styles.card}>
+                        <View style={styles.travelerInfo}>
+                            <Ionicons name="person-circle-outline" size={50} color={COLORS.primary} />
+                            <View style={styles.travelerDetails}>
+                                <Text style={styles.travelerName}>{traveler.username}</Text>
+                                <Text style={styles.travelerRating}>⭐ 4.8 (12 reviews)</Text>
+                            </View>
+                        </View>
+                        {/* Verified Section Added Here */}
+                        <View style={styles.verifiedBadge}>
+                            <Ionicons name="shield-checkmark" size={16} color={COLORS.green} />
+                            <Text style={styles.verifiedText}>Verified Traveler</Text>
                         </View>
                     </View>
                 </View>
                 
                 {/* Payment Method Card (Mock) */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Payment Method</Text>
-                    <View style={styles.paymentMethod}>
-                        <View style={styles.cardIcon}>
-                            <Ionicons name="card" size={24} color={COLORS.primary} />
+                <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>Payment Method</Text>
+                    <TouchableOpacity style={styles.card} disabled={isProcessing}>
+                        <View style={styles.paymentMethod}>
+                            <View style={styles.cardIcon}>
+                                <Ionicons name="card" size={24} color={COLORS.primary} />
+                            </View>
+                            <View style={styles.cardDetails}>
+                                <Text style={styles.cardType}>Visa •••• 4242</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={22} color={COLORS.textSecondary} />
                         </View>
-                        <View style={styles.cardDetails}>
-                            <Text style={styles.cardType}>Visa •••• 4242</Text>
-                            <Text style={styles.cardSubtext}>Expires 12/25</Text>
-                        </View>
-                        <TouchableOpacity disabled={isProcessing}>
-                            <Text style={styles.changeText}>Change</Text>
-                        </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
                 </View>
                 
-                {/* Security Notice */}
-                <View style={styles.securityNotice}>
-                    <Ionicons name="shield-checkmark" size={20} color={COLORS.green} />
-                    <Text style={styles.securityText}>
-                        Your payment is held securely until delivery is confirmed
-                    </Text>
+                {/* Order Summary Card */}
+                <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>Order Summary</Text>
+                    <View style={styles.card}>
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>{request.productName} (x{request.quantity})</Text>
+                            <Text style={styles.summaryValue}>${itemTotal.toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Delivery Fee</Text>
+                            <Text style={styles.summaryValue}>${deliveryFee.toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.separator} />
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.totalLabel}>Total</Text>
+                            <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+                        </View>
+                    </View>
                 </View>
             </ScrollView>
             
-            {/* Pay Button */}
+            {/* Footer with Pay Button and Security Notice */}
             <View style={styles.footer}>
+                <View style={styles.securityNotice}>
+                    <Ionicons name="lock-closed" size={16} color={COLORS.textSecondary} />
+                    <Text style={styles.securityText}>
+                        Your payment is held securely until you confirm delivery.
+                    </Text>
+                </View>
                 <TouchableOpacity
                     style={[styles.payButton, isProcessing && styles.buttonDisabled]}
                     onPress={handlePayment}
                     disabled={isProcessing}
                 >
                     {isProcessing ? (
-                        <ActivityIndicator color={COLORS.text} />
+                        <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                        <>
-                            <Ionicons name="lock-closed" size={20} color={COLORS.text} />
-                            <Text style={styles.payButtonText}>
-                                Pay ${total.toFixed(2)}
-                            </Text>
-                        </>
+                        <Text style={styles.payButtonText}>
+                            Pay ${total.toFixed(2)}
+                        </Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -223,53 +204,43 @@ export default function PaymentScreen() {
                         <View style={styles.successIcon}>
                             <Ionicons name="checkmark-circle" size={80} color={COLORS.green} />
                         </View>
-                        
                         <Text style={styles.successTitle}>Payment Successful!</Text>
                         <Text style={styles.successSubtext}>
-                            Your order has been confirmed
+                            Your order is confirmed. Please share the code below with your traveler upon receiving your item.
                         </Text>
                         
                         {/* Delivery Code Display */}
                         <View style={styles.codeContainer}>
-                            <Text style={styles.codeLabel}>Delivery Code</Text>
+                            <Text style={styles.codeLabel}>Your Delivery Code</Text>
                             <Text style={styles.codeText}>{deliveryCode}</Text>
-                            <Text style={styles.codeInstruction}>
-                                Share this code with the traveler when you receive your item
-                            </Text>
-                        </View>
-                        
-                        <View style={styles.warningBox}>
-                            <Ionicons name="information-circle" size={20} color={COLORS.orange} />
-                            <Text style={styles.warningText}>
-                                Keep this code secure. The traveler needs it to receive payment.
-                            </Text>
                         </View>
                         
                         <TouchableOpacity
                             style={styles.continueButton}
                             onPress={handleSuccessClose}
                         >
-                            <Text style={styles.continueButtonText}>Continue to Chat</Text>
+                            <Text style={styles.continueButtonText}>View Order Details</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
-        </View>
+        </SafeAreaView>
     );
 }
 
+
 // --- Styles ---
 const COLORS = {
-    primary: '#0A84FF',
-    background: '#000000',
-    contentBackground: '#1C1C1E',
-    card: '#2C2C2E',
-    text: '#FFFFFF',
-    textSecondary: '#AEAEB2',
-    separator: '#38383A',
-    green: '#30D158',
-    orange: '#FF9F0A',
-    disabled: '#4A4A4E',
+    primary: '#007AFF',
+    background: '#F2F2F7',
+    card: '#FFFFFF',
+    textPrimary: '#000000',
+    textSecondary: '#8A8A8E',
+    separator: '#E5E5EA',
+    green: '#34C759',
+    orange: '#FF9500',
+    disabled: '#A9A9A9',
+    shadow: 'rgba(0,0,0,0.1)'
 };
 
 const styles = StyleSheet.create({
@@ -283,49 +254,67 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: COLORS.background,
     },
+    errorText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: COLORS.textSecondary,
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'ios' ? 50 : 20,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.separator,
+        paddingVertical: 12,
+        backgroundColor: COLORS.background,
+    },
+    backButton: {
+        height: 40,
+        width: 40,
+        justifyContent: 'center',
+        alignItems: 'flex-start',
     },
     headerTitle: {
-        color: COLORS.text,
-        fontSize: 18,
-        fontWeight: '600',
+        color: COLORS.textPrimary,
+        fontSize: 20,
+        fontWeight: '700',
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 100,
+        paddingBottom: 150, // Ensure content isn't hidden by footer
     },
-    card: {
-        backgroundColor: COLORS.contentBackground,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
+    sectionContainer: {
+        marginBottom: 24,
     },
-    cardTitle: {
-        color: COLORS.text,
+    sectionTitle: {
         fontSize: 16,
         fontWeight: '600',
+        color: COLORS.textPrimary,
         marginBottom: 12,
+        paddingHorizontal: 8,
+    },
+    card: {
+        backgroundColor: COLORS.card,
+        borderRadius: 12,
+        padding: 16,
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
     },
     summaryRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingVertical: 8,
+        alignItems: 'center',
+        paddingVertical: 10,
     },
     summaryLabel: {
         color: COLORS.textSecondary,
-        fontSize: 15,
+        fontSize: 16,
     },
     summaryValue: {
-        color: COLORS.text,
-        fontSize: 15,
+        color: COLORS.textPrimary,
+        fontSize: 16,
         fontWeight: '500',
     },
     separator: {
@@ -334,12 +323,12 @@ const styles = StyleSheet.create({
         marginVertical: 8,
     },
     totalLabel: {
-        color: COLORS.text,
+        color: COLORS.textPrimary,
         fontSize: 18,
         fontWeight: 'bold',
     },
     totalValue: {
-        color: COLORS.text,
+        color: COLORS.textPrimary,
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -351,8 +340,8 @@ const styles = StyleSheet.create({
         marginLeft: 12,
     },
     travelerName: {
-        color: COLORS.text,
-        fontSize: 16,
+        color: COLORS.textPrimary,
+        fontSize: 17,
         fontWeight: '600',
     },
     travelerRating: {
@@ -360,14 +349,30 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginTop: 2,
     },
+    verifiedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: `${COLORS.green}1A`, // Green with low opacity
+        borderRadius: 12,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        marginTop: 12,
+        alignSelf: 'flex-start', // Don't stretch full width
+    },
+    verifiedText: {
+        color: COLORS.green,
+        fontSize: 13,
+        fontWeight: '500',
+        marginLeft: 6,
+    },
     paymentMethod: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     cardIcon: {
-        width: 50,
-        height: 35,
-        backgroundColor: COLORS.card,
+        width: 44,
+        height: 44,
+        backgroundColor: `${COLORS.primary}1A`, // Primary blue with low opacity
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
@@ -377,33 +382,9 @@ const styles = StyleSheet.create({
         marginLeft: 12,
     },
     cardType: {
-        color: COLORS.text,
-        fontSize: 15,
+        color: COLORS.textPrimary,
+        fontSize: 16,
         fontWeight: '500',
-    },
-    cardSubtext: {
-        color: COLORS.textSecondary,
-        fontSize: 13,
-        marginTop: 2,
-    },
-    changeText: {
-        color: COLORS.primary,
-        fontSize: 15,
-        fontWeight: '500',
-    },
-    securityNotice: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.contentBackground,
-        borderRadius: 8,
-        padding: 12,
-        marginTop: 8,
-    },
-    securityText: {
-        color: COLORS.textSecondary,
-        fontSize: 13,
-        marginLeft: 8,
-        flex: 1,
     },
     footer: {
         position: 'absolute',
@@ -411,49 +392,56 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         padding: 16,
-        paddingBottom: Platform.OS === 'ios' ? 30 : 16,
-        backgroundColor: COLORS.background,
+        backgroundColor: COLORS.card, // White footer for contrast
         borderTopWidth: 1,
         borderTopColor: COLORS.separator,
+    },
+    securityNotice: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    securityText: {
+        color: COLORS.textSecondary,
+        fontSize: 13,
+        marginLeft: 8,
+        textAlign: 'center',
     },
     payButton: {
         backgroundColor: COLORS.primary,
         height: 54,
         borderRadius: 12,
-        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 8,
     },
     payButtonText: {
-        color: COLORS.text,
+        color: '#FFFFFF',
         fontSize: 18,
         fontWeight: 'bold',
     },
     buttonDisabled: {
-        opacity: 0.5,
+        backgroundColor: COLORS.disabled,
     },
     modalBackdrop: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.9)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'flex-end',
     },
     successModal: {
-        backgroundColor: COLORS.contentBackground,
-        borderRadius: 20,
+        backgroundColor: COLORS.card,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
         padding: 24,
-        width: '100%',
-        maxWidth: 400,
+        paddingBottom: 40,
         alignItems: 'center',
     },
     successIcon: {
         marginBottom: 16,
     },
     successTitle: {
-        color: COLORS.text,
-        fontSize: 24,
+        color: COLORS.textPrimary,
+        fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 8,
     },
@@ -461,14 +449,16 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 16,
         marginBottom: 24,
+        textAlign: 'center',
+        lineHeight: 22,
     },
     codeContainer: {
         width: '100%',
-        backgroundColor: COLORS.card,
-        borderRadius: 12,
+        backgroundColor: COLORS.background,
+        borderRadius: 16,
         padding: 20,
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 24,
     },
     codeLabel: {
         color: COLORS.textSecondary,
@@ -476,42 +466,22 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     codeText: {
-        color: COLORS.text,
+        color: COLORS.primary,
         fontSize: 48,
         fontWeight: 'bold',
         letterSpacing: 8,
-        marginBottom: 12,
-    },
-    codeInstruction: {
-        color: COLORS.textSecondary,
-        fontSize: 13,
-        textAlign: 'center',
-    },
-    warningBox: {
-        flexDirection: 'row',
-        backgroundColor: COLORS.card,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 24,
-        width: '100%',
-    },
-    warningText: {
-        color: COLORS.textSecondary,
-        fontSize: 13,
-        marginLeft: 8,
-        flex: 1,
     },
     continueButton: {
         backgroundColor: COLORS.primary,
         width: '100%',
-        height: 50,
+        height: 54,
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
     },
     continueButtonText: {
-        color: COLORS.text,
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontSize: 17,
+        fontWeight: '600',
     },
 });

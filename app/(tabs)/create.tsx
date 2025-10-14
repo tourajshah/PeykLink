@@ -163,7 +163,7 @@ export default function Create() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  headerContainer: { paddingTop: 5, paddingBottom: 24, paddingHorizontal: 20 },
+  headerContainer: { paddingTop: 12, paddingBottom: 24, paddingHorizontal: 20 },
   header: { fontSize: 34, fontWeight: '700', color: PALETTE.textPrimary },
   subHeader: { fontSize: 17, color: PALETTE.textSecondary, marginTop: 8 },
   cardsContainer: { flexDirection: 'row', marginBottom: 32, gap: 16, paddingHorizontal: 20 },

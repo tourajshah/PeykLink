@@ -10,6 +10,38 @@ function generateDeliveryCode(): string {
     return code;
 }
 
+
+function generateKey(userId: string): string {
+    // DO NOT change the secret once in production, or old codes will be unreadable
+    const secret = process.env.ENCRYPTION_SECRET!; 
+    if (!secret) {
+        throw new Error("ENCRYPTION_SECRET environment variable not set!");
+    }
+    // Simple key generation - for this use case, it's sufficient
+    return userId.slice(0, 10) + secret.slice(0, 10);
+}
+
+function encrypt(text: string, key: string): string {
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+        const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        result += String.fromCharCode(charCode);
+    }
+    return btoa(result); // Base64 encode to safely store in DB
+}
+
+function decrypt(encryptedText: string, key: string): string {
+    let result = '';
+    const decodedText = atob(encryptedText); // Base64 decode
+    for (let i = 0; i < decodedText.length; i++) {
+        const charCode = decodedText.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        result += String.fromCharCode(charCode);
+    }
+    return result;
+}
+
+
+
 // Simple hash function (Convex doesn't have crypto.subtle, so we use basic hash)
 // For production, you'd use a proper hashing library
 function hashCode(code: string): string {
@@ -67,6 +99,10 @@ export const createOrder = mutation({
         const deliveryCode = generateDeliveryCode();
         const hashedCode = hashCode(deliveryCode);
         
+        const encryptionKey = generateKey(currentUser._id);
+        const encryptedCode = encrypt(deliveryCode, encryptionKey);
+
+
         // Calculate total
         const itemPrice = request.itemPrice * request.quantity;
         const travelerFee = negotiation.proposedFee;
@@ -85,7 +121,7 @@ export const createOrder = mutation({
             
             paymentStatus: "paid", // Mock payment - instant success
             deliveryCode: hashedCode, // Store hashed version
-            
+            encryptedDeliveryCode: encryptedCode,
             paidAt: Date.now(),
             codeAttempts: 0, // Track failed attempts
         });
@@ -158,11 +194,18 @@ export const confirmDelivery = mutation({
     handler: async (ctx, args) => {
         const currentUser = await getAuthenticatedUser(ctx);
         const order = await ctx.db.get(args.orderId);
-        
+
         if (!order) {
             throw new Error("Order not found");
         }
         
+        const requester = await ctx.db.get(order.requesterId)
+        const traveler = await ctx.db.get(order.travelerId)
+
+        if (!requester || !traveler) {
+            throw new Error ("Traveler or Requester for this delevery couldnt be found")
+        }
+
         // Only traveler can confirm
         if (order.travelerId !== currentUser._id) {
             throw new Error("Only the traveler can confirm delivery");
@@ -207,7 +250,18 @@ export const confirmDelivery = mutation({
         await ctx.db.patch(order.negotiationId, {
             status: "completed"
         })
+
+        // UPDATE COMPELETED ORDERS OF BOTH PARTIES
+
+        await ctx.db.patch(requester._id, {
+            completedOrders: (requester.completedOrders) + 1
+        })
         
+        await ctx.db.patch(traveler._id, {
+            completedOrders: (traveler.completedOrders) + 1
+        })
+
+
         // TODO: Trigger review notifications here
         
         return { 
@@ -228,5 +282,34 @@ export const getOrderByNegotiation = query({
             .first();
         
         return order;
+    },
+});
+
+
+export const getDecryptedCode = query({
+    args: { orderId: v.id("orders") },
+    handler: async (ctx, args) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        const order = await ctx.db.get(args.orderId);
+
+        if (!order || !order.encryptedDeliveryCode) {
+            return null; // No order or no code to decrypt
+        }
+
+        // SECURITY CHECK: Only the requester can decrypt their own code.
+        if (order.requesterId !== currentUser._id) {
+            // Not an error, just return null for privacy.
+            return null;
+        }
+
+        // Decrypt and return the code
+        try {
+            const encryptionKey = generateKey(currentUser._id);
+            const plainTextCode = decrypt(order.encryptedDeliveryCode, encryptionKey);
+            return plainTextCode;
+        } catch (error) {
+            console.error("Decryption failed for order:", args.orderId, error);
+            return null; // Return null if decryption fails for any reason
+        }
     },
 });

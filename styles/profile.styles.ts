@@ -1,258 +1,230 @@
-// styles/profile.styles.ts
-import { COLORS } from "@/constants/theme";
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from 'react-native';
 
-const { width, height } = Dimensions.get("window");
+
+const COLORS = {
+  backgroundGradient: ['#F7F8FA', '#FFFFFF'] as const, // Subtle gradient for a non-flat look
+  surface: '#FFFFFF',
+  shadow: 'rgba(100, 100, 111, 0.15)', // A softer, more realistic shadow color
+  primary: '#3B82F6', // A single, consistent primary blue
+  secondary: '#10B981', // A single, consistent secondary green
+  textPrimary: '#1F2937', // Near-black for high contrast
+  textSecondary: '#6B7280', // Medium gray for secondary info
+  historyIcon: '#ed7c04ff',
+  primaryGradient: ['#38BDF8', '#3B82F6'] as const,
+  secondaryActionGradient: ['#34D399', '#10B981'] as const, 
+};
 
 export const styles = StyleSheet.create({
+  // --- Main Container ---
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F7F8FA', // Use the lighter gradient color for background
   },
+  scrollContentContainer: {
+    padding: 16,
+    paddingTop: 8,
+  },
+
+  // --- Header ---
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.surface,
+    paddingTop: 50, // Adjust for safe area
+    paddingBottom: 12,
+    backgroundColor: '#F7F8FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  username: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.white,
-  },
-  headerRight: {
-    flexDirection: "row",
-    gap: 16,
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
   },
   headerIcon: {
     padding: 4,
   },
-  profileInfo: {
+
+  // --- Profile Info Card ---
+  profileCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
     padding: 16,
+    marginBottom: 24,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  avatarAndStats: {
-    flexDirection: "row",
-    alignItems: "center",
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  avatarContainer: {
-    marginRight: 32,
-  },
   avatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: COLORS.primary,
   },
-  statsContainer: {
+  profileHeaderText: {
+    marginLeft: 16,
     flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-around",
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  name: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+  },
+  verifiedBadge: {
+    marginLeft: 8,
+  },
+  username: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  bio: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+
+  // --- Stats Display ---
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#F7F8FA',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginBottom: 20,
   },
   statItem: {
-    alignItems: "center",
+    alignItems: 'center',
+    flex: 1,
+  },
+  statSeparator: {
+    width: 1,
+    backgroundColor: '#E5E7EB',
+    height: '100%',
   },
   statNumber: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 13,
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
   },
 
-  name: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.white,
-    marginBottom: 4,
-  },
-  bio: {
-    fontSize: 14,
-    color: COLORS.white,
-    lineHeight: 20,
-  },
+  // --- Action Buttons ---
   actionButtons: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   editButton: {
     flex: 1,
-    backgroundColor: COLORS.surface,
-    padding: 8,
-    borderRadius: 8,
-    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   editButtonText: {
-    color: COLORS.white,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  shareButton: {
-    backgroundColor: COLORS.surface,
-    padding: 8,
-    borderRadius: 8,
-    aspectRatio: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gridItem: {
-    flex: 1 / 3,
-    aspectRatio: 1,
-    padding: 1,
-  },
-  gridImage: {
-    flex: 1,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    minHeight: 400,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    color: COLORS.grey,
-    marginBottom: 8,
-    fontSize: 14,
-  },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 8,
-    padding: 12,
-    color: COLORS.white,
+    color: COLORS.surface,
     fontSize: 16,
+    fontWeight: '600',
   },
-  bioInput: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  saveButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-    justifyContent: "center",
-  },
-  postDetailContainer: {
-    backgroundColor: COLORS.background,
-    maxHeight: height * 0.9,
-  },
-  postDetailHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    padding: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.surface,
-  },
-  postDetailImage: {
-    width: width,
-    height: width,
-  },
-  followButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  followingButton: {
-    backgroundColor: COLORS.surface,
+  iconButton: {
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.primary,
   },
-  followButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  followingButtonText: {
-    color: COLORS.white,
-    textAlign: "center",
-  },
-  noPostsContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    gap: 12,
-    flex: 1,
-  },
-  noPostsText: {
-    color: COLORS.grey,
-    fontSize: 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  postsGrid: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.white,
-  },
+
+  // --- Reviews Section ---
   reviewsTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginHorizontal: 16,
-        marginBottom: 10,
-        marginTop: 20,
-    },
-    emptyReviewsContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-    },
-    emptyReviewsText: {
-        color: '#64748b',
-        fontSize: 16,
-    },
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+    marginBottom: 16,
+  },
+  emptyReviewsContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+  },
+  emptyReviewsText: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    marginTop: 8,
+  },
+
+  // --- Edit Profile Modal ---
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface,
+    padding: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#F7F8FA',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  bioInput: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  saveButtonText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
