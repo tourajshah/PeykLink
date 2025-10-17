@@ -9,7 +9,7 @@ export default defineSchema({
         email: v.string(),
         bio: v.optional(v.string()),
         imageURL: v.string(),
-        rating: v.number(),
+        rating: v.optional(v.number()),
         clerkId: v.string(),
         completedOrders: v.number(),
     }).index("by_clerk_id", ["clerkId"]),

@@ -79,11 +79,16 @@ export const getFeedRequests = query ({
 
         // get other data
 
-        const requestsWIthInfo = await Promise.all(
+        const requestsWithInfo = await Promise.all(
             
             requests.map(async(request) => {
 
                 const requestCreator = (await ctx.db.get(request.requesterId))!
+
+                if(!requestCreator) {
+                  return null
+                }
+
                 const originCityInfo = cityData.find(c => c.name === request.originCity && c.country === request.originCountry);
                 const destinationCityInfo = cityData.find(c => c.name === request.destinationCity && c.country === request.destinationCountry);
 
@@ -94,7 +99,7 @@ export const getFeedRequests = query ({
                     destinationCountryCode: destinationCityInfo?.countryCode ?? '', // fallback
 
                     requester:{
-                        _id:requestCreator?._id,
+                        _id:requestCreator?._id as string,
                         username: requestCreator?.username,
                         image: requestCreator?.imageURL
                     },
@@ -105,7 +110,7 @@ export const getFeedRequests = query ({
 
         )
 
-        return requestsWIthInfo
+        return requestsWithInfo.filter((request): request is NonNullable<typeof request> => request !== null)
     },
 });
 

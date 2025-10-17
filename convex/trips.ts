@@ -80,7 +80,8 @@ export const getFeedTrips = query ({
                     traveler:{
                         _id:tripCreator?._id,
                         username: tripCreator?.username,
-                        image: tripCreator?.imageURL
+                        image: tripCreator?.imageURL,
+                        rating: tripCreator.rating
                     },
 
                 }
@@ -149,7 +150,8 @@ export const getMyTrips = query({
         traveler: {
           _id: currentUser._id,
           username: currentUser.username,
-          image: currentUser.imageURL
+          image: currentUser.imageURL,
+          rating: currentUser.rating
         },
       };
     });
@@ -218,6 +220,7 @@ export const getTripById = query({
                 _id: traveler?._id,
                 username: traveler?.username,
                 image: traveler?.imageURL,
+                rating: traveler?.rating,
             }
         };
     },
@@ -239,10 +242,10 @@ export const getMyMatchingTrips = query({
             .query("trips")
             .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
             .filter((q) =>
-                q.and(
-                    q.eq(q.field("originCity"), args.originCity,),
-                    q.eq(q.field("destinationCity"), args.destinationCity)
-                )
+              q.and(
+                  q.eq(q.field("originCity"), args.originCity,),
+                  q.eq(q.field("destinationCity"), args.destinationCity)
+              )
             )
             .collect();
 
@@ -251,23 +254,92 @@ export const getMyMatchingTrips = query({
 })
 
 
-// export const getMyMatchingRequests = query({
-//     args: {},
-//     handler: async (ctx) => {
-//         const currentUser = await getAuthenticatedUser(ctx);
-//         if (!currentUser) {
-//             return []
-//         }
+export const getRecommendedRequests = query({
+    args: {},
+    handler: async (ctx) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        if (!currentUser) {
+            return []
+        }
 
-//         const myTrips = await ctx.db 
-//           .query("trips")
-//           .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
-//           .order('desc')
-//           .collect();
+        const userTrips = await ctx.db 
+          .query("trips")
+          .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
+          .order('desc')
+          .collect();
 
-//         const matchingRequests = await ctx.db
-//           .query('requests')
-          
+        const userTripsRoute = userTrips.flatMap((trip) => {
+
+          const origin = cityData.find(c => c.name === trip.originCity && c.country === trip.originCountry)
+          const destination = cityData.find(c => c.name === trip.destinationCity && c.country === trip.destinationCountry)
+          if (!origin || !destination) {
+            return []
+          }
+          const originCity = origin.name
+          const originCountry = origin.country
+          const originCountryCode = origin.countryCode
+          const destinationCity = destination.name
+          const destinationCountry = destination.country
+          const destinationCountryCode = destination.countryCode
+
+          return {
+            origin,destination,
+            originCity,originCountry,originCountryCode,
+            destinationCity,destinationCountry,destinationCountryCode
             
-//     }
-// })
+          }
+        })
+
+        const userOriginCities = userTripsRoute.map((trip) => trip.originCity)
+        const userDestinationCities = userTripsRoute.map((trip) => trip.destinationCity)
+
+        const allRequests = await ctx.db.query("requests")
+          .filter((q) => 
+          q.and(
+            q.neq(q.field("requesterId"), currentUser._id),
+            q.eq(q.field("visibility"), "public")
+            ))
+          .collect()
+
+        const matchingRequests = allRequests.filter((request) =>
+          userOriginCities.includes(request.originCity) &&
+          userDestinationCities.includes(request.destinationCity)
+        )
+
+        if(matchingRequests.length === 0) return []
+
+        const matchingRequestsWithInfo = await Promise.all(
+            
+          matchingRequests.map(async(request) => {
+
+              const requestCreator = (await ctx.db.get(request.requesterId))
+
+              if (!requestCreator) {
+                return null
+              }
+
+              const originCityInfo = cityData.find(c => c.name === request.originCity && c.country === request.originCountry);
+              const destinationCityInfo = cityData.find(c => c.name === request.destinationCity && c.country === request.destinationCountry);
+
+              return {
+                  ...request,
+
+                  originCountryCode: originCityInfo?.countryCode ?? '', // fallback
+                  destinationCountryCode: destinationCityInfo?.countryCode ?? '', // fallback
+
+                  requester:{
+                      _id:requestCreator?._id as string,
+                      username: requestCreator?.username,
+                      image: requestCreator?.imageURL
+                  },
+
+              }
+
+          })
+
+        )
+
+        return matchingRequestsWithInfo.filter((request): request is NonNullable<typeof request> => request !== null)     
+    }
+
+})
