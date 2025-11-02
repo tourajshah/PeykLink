@@ -15,6 +15,7 @@ export const createRequest = mutation({
     args:{
         productName: v.string(),
         productURL: v.optional(v.string()),
+        imageKey: v.optional(v.string()),
         productWeight: v.optional(v.string()),
         quantity: v.number(),
         itemPrice: v.number(),
@@ -40,6 +41,7 @@ export const createRequest = mutation({
             requesterId: currentUser._id,
             productName: args.productName,
             productURL: args.productURL,
+            imageKey: args.imageKey,
             productWeight: args.productWeight,
             quantity: args.quantity,
             itemPrice: args.itemPrice,
@@ -226,6 +228,7 @@ export const createDirectRequestAndOffer = mutation({
         // same args from createRequest
         productName: v.string(),
         productURL: v.optional(v.string()),
+        imageKey: v.optional(v.string()),
         productWeight: v.optional(v.string()),
         quantity: v.number(),
         itemPrice: v.number(),
@@ -252,6 +255,7 @@ export const createDirectRequestAndOffer = mutation({
             requesterId: currentUser._id,
             productName: args.productName,
             productURL: args.productURL,
+            imageKey: args.imageKey,
             productWeight: args.productWeight,
             quantity: args.quantity,
             itemPrice: args.itemPrice,

@@ -55,7 +55,7 @@ type TripProps = {
             _id: string;
             username: string;
             image: string;
-            rating: number;
+            rating?: number;
         };
     }
 }
@@ -128,13 +128,13 @@ export default function Trip({trip}: TripProps) {
     }
     
     type StarDisplayProps = {
-        rating: number;
+        rating?: number;
         size?: number;
     };
 
     // --- UPGRADED StarDisplay Component ---
     // Now uses MaterialIcons for a cleaner look and supports decimal ratings (e.g., 4.5)
-    const StarDisplay = ({ rating, size = 16 }: StarDisplayProps) => (
+    const StarDisplay = ({ rating=0, size = 16 }: StarDisplayProps) => (
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {[1, 2, 3, 4, 5].map((star) => {
           if (rating >= star) {

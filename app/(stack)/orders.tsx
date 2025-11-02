@@ -1,8 +1,10 @@
+import { useUploadFile } from "@convex-dev/r2/react";
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useMutation, useQuery } from 'convex/react';
 import { Image } from "expo-image";
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -74,9 +76,12 @@ export default function RequestsScreen() {
     const createDirectRequestAndOffer = useMutation(api.requests.createDirectRequestAndOffer);
     const createRequest = useMutation(api.requests.createRequest);
     const updateRequest = useMutation(api.requests.updateRequest);
+    const uploadFile = useUploadFile(api.r2);
 
     const [productName, setProductName] = useState('');
     const [productURL, setProductURL] = useState('');
+    const [selectedFile, setSelectedFile] = useState<ImagePicker.ImagePickerAsset | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const [itemPrice, setItemPrice] = useState('');
     const [quantity, setQuantity] = useState('1');
     const [travelerFee, setTravelerFee] = useState('');
@@ -166,6 +171,27 @@ export default function RequestsScreen() {
         if (event.type === 'set' && selectedDate) { setRequiredByDate(selectedDate); }
     };
 
+    const handleImagePick = async () => {
+    // Request permission to access the media library
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permission.status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant permission to access your photo library.');
+        return;
+        }
+
+        // Launch the image picker
+        const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // Square aspect ratio
+        quality: 0.8, // Compress image slightly
+        });
+
+        if (!result.canceled) {
+        setSelectedFile(result.assets[0]);
+        }
+    };
+
     const validateForm = () => {
         const newErrors: { [key: string]: string } = {};
         if (!productName) newErrors.productName = 'Product name is required.';
@@ -179,11 +205,50 @@ export default function RequestsScreen() {
 
     const handleSubmit = async () => {
         const isFormValid = validateForm();
-        if (!isEditMode && !isFormValid) { return; }
+        if (!isEditMode && !isFormValid) { return }
         setIsSubmitting(true);
+
+        let imageKey : string | undefined = undefined
         try {
+            if (selectedFile) {
+
+                const mimeType = selectedFile.mimeType || selectedFile.type || 'image/jpeg';
+                if (!mimeType.startsWith('image/')) {
+                    Alert.alert(
+                        'Invalid File Type', 
+                        'Only image files are allowed. Please select a valid image (JPEG, PNG, etc.).'
+                    );
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                // Fetch the file and convert to blob
+                const response = await fetch(selectedFile.uri);
+                const blob = await response.blob();
+
+
+                const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+
+                if (blob.size > MAX_FILE_SIZE) {
+                    Alert.alert(
+                        'File Too Large', 
+                        `The image is too large (${(blob.size / (1024 * 1024)).toFixed(2)} MB). Maximum file size is 5MB. Please select a smaller image.`
+                    );
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                const file = new File(
+                    [blob], 
+                    selectedFile.fileName || `image_${Date.now()}.jpg`,
+                    { type: mimeType }
+                );
+
+                imageKey = await uploadFile(file);
+            }
             const requestData = {
                 productName, productURL,
+                imageKey: imageKey,
                 quantity: parseInt(quantity, 10),
                 itemPrice: parseFloat(itemPrice),
                 travelerFee: parseFloat(travelerFee),
@@ -224,7 +289,13 @@ export default function RequestsScreen() {
             router.back();
         } catch (error) {
             console.error('Failed to submit request:', error);
-            Alert.alert('Error', `Could not ${isEditMode ? 'update' : 'post'} your request. Please try again.`);
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+
+            if (errorMessage.includes('too large') || errorMessage.includes('Only images')) {
+                Alert.alert('Upload Failed', errorMessage);
+            } else {
+                Alert.alert('Error', `Could not ${isEditMode ? 'update' : 'post'} your request. Please try again.`);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -296,6 +367,34 @@ export default function RequestsScreen() {
                                 <View style={styles.inputContainer}>
                                     <TextInput style={styles.inputText} placeholder="https://apple.com/iphone" placeholderTextColor={COLORS.placeholder} value={productURL} onChangeText={setProductURL} />
                                 </View>
+                            </View>
+                            <View>
+                                <Text style={styles.label}>Product Image (Optional)</Text>
+                                {/* Show preview if an image is selected */}
+                                {selectedFile ? (
+                                    <View style={styles.imagePreviewContainer}>
+                                        <Image source={{ uri: selectedFile.uri }} style={styles.imagePreview} />
+                                        <TouchableOpacity 
+                                            style={styles.removeImageButton} 
+                                            onPress={() => setSelectedFile(null)}
+                                            disabled={isEditMode || isSubmitting}
+                                        >
+                                            <MaterialCommunityIcons name="close" size={18} color={COLORS.surface} />
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    /* Show picker button if no image is selected */
+                                    <TouchableOpacity
+                                    style={[styles.imagePicker, isEditMode && styles.inputContainerDisabled]}
+                                    onPress={handleImagePick}
+                                    disabled={isEditMode || isSubmitting}
+                                    >
+                                    <MaterialCommunityIcons name="image-plus" size={32} color={isEditMode ? COLORS.disabled : COLORS.textSecondary} />
+                                    <Text style={[styles.imagePickerText, isEditMode && styles.inputTextDisabled]}>
+                                        Tap to select an image
+                                    </Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </View>
                     </View>
@@ -607,4 +706,46 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: 'bold',
     },
+    imagePicker: {
+    backgroundColor: COLORS.background,
+    height: 120,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.separator,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  imagePickerText: {
+    color: COLORS.textSecondary,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  imagePreviewContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: COLORS.background,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.separator,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.surface
+  },
 });

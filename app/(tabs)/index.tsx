@@ -5,7 +5,8 @@ import Trip from "@/components/Trip";
 import { STORIES } from "@/constants/mock-data";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery } from "convex/react";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -30,6 +31,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 // MODIFIED: Light Theme COLORS
 const COLORS = {
   primary: '#007BFF', // Stays blue
+  green:'#10B981', // request green
   white: '#FFFFFF',   // Used for backgrounds
   grey: '#6A6A6A',    // Darker grey for text on light backgrounds
   lightGrey: '#F0F0F0', // Very light grey for card backgrounds
@@ -129,12 +131,14 @@ export default function Index() {
             style={[styles.tab, isTripsActive && styles.activeTab]}
             onPress={() => setActiveTab('trips')}
           >
+            <MaterialCommunityIcons name="airplane-marker" size={24} color="white" />
             <Text style={[styles.tabText, isTripsActive && styles.activeTabText]}>Trips</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, !isTripsActive && styles.activeTab]}
+            style={[styles.tab, !isTripsActive && styles.activeTabRequest]}
             onPress={() => setActiveTab('requests')}
           >
+            <Feather name="package" size={24} color="white" />
             <Text style={[styles.tabText, !isTripsActive && styles.activeTabText]}>Requests</Text>
           </TouchableOpacity>
         </View>
@@ -332,6 +336,9 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: COLORS.primary,
+  },
+  activeTabRequest: {
+    backgroundColor: COLORS.green,
   },
   tabText: {
     fontSize: 15,

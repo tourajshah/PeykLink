@@ -18,6 +18,7 @@ export default defineSchema({
         requesterId: v.id("users"),
         productName: v.string(),
         productURL: v.optional(v.string()),
+        imageKey: v.optional(v.string()),
         productWeight: v.optional(v.string()),
         quantity: v.number(),
         itemPrice: v.number(),
@@ -129,7 +130,22 @@ export default defineSchema({
     messages: defineTable({
         negotiationId: v.id("negotiations"), // The offer that is accepted
         senderId: v.id("users"),     // who made sent the message.
-        message: v.string(),
+        type: v.union(
+            v.literal("text"),
+            v.literal("image"),
+        ),
+        text: v.optional(v.string()),
+        image: v.optional(v.string())
 
     }).index("by_negotiationId", ["negotiationId"]),
+
+
+    images: defineTable({
+        key: v.string(),
+        bucket: v.string(),
+        fileName: v.string(),
+        fileType: v.string(),
+        uploaderId: v.id("users")
+    }).index("bucket_key", ["bucket", "key"])
+      .index("by_uploaderId", ["uploaderId"]),
 });

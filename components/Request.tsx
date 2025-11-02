@@ -2,31 +2,48 @@ import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { useUser } from '@clerk/clerk-expo';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import AntDesign from '@expo/vector-icons/AntDesign';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons'; // ADDED: For StarDisplay
 import { useMutation, useQuery } from 'convex/react';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import LottieView from 'lottie-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+// import LottieView from 'lottie-react-native'; // REMOVED
+import { useEffect, useMemo, useRef, useState } from 'react'; // REMOVED: useEffect and useRef
 import { ActivityIndicator, Alert, LayoutAnimation, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CountryFlag from "react-native-country-flag";
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 
 
-
-
-const COLORS = {
-    primary: '#007BFF',
-    primary_light: '#4DA3FF',
-    white: '#FFFFFF',
-    grey: '#AEAEB2',
-    dark: '#1C1C1E',
-    card: '#2C2C2E',
-    reward: '#34C759',
+// NEW: Light-mode palette from Trip component
+const PALETTE = {
+    backgroundGradient: ['#F7F8FA', '#FFFFFF'] as const,
+    surface: '#FFFFFF',
+    shadow: 'rgba(100, 100, 111, 0.25)',
+    primary: '#3B82F6', // Kept for StarDisplay default, though not used elsewhere
+    secondary: '#10B981',
+    textPrimary: '#1F2937',
+    textSecondary: '#6B7280',
+    historyIcon: '#ed7c04ff',
+    primaryGradient: ['#38BDF8', '#3B82F6'] as const,
+    secondaryActionGradient: ['#34D399', '#10B981'] as const, 
+    border: '#D1D5DB',
+    status_active: '#10B981', 
+    status_completed: '#6B7280', 
+    status_pending: '#F59E0B', 
+    ratingStar: '#FBBF24', 
+    destructive: '#EF4444',
 };
+
+// NEW: Specific palette for Request component per your rules
+const REQUEST_PALETTE = {
+    primaryGradient: ['#34D399', '#10B981'] as const,
+    primary: '#10B981',
+    reward: '#10B981', // Using the new green for rewards
+};
+
 
 type RequestProps = {
     request:{
@@ -34,6 +51,7 @@ type RequestProps = {
         _creationTime: number;
         description?: string;
         productURL?: string;
+        imageKey?: string;
         productWeight?: string;
         originCity: string;
         destinationCity: string;
@@ -52,19 +70,51 @@ type RequestProps = {
             _id: string;
             username: string;
             image: string;
+            rating?: number;
         };
     }
 }
 
-export default function Request({request}: RequestProps) {
-    const animation = useRef<LottieView>(null);
-    useEffect(() => {
-        // animation.current?.play();
-    }, []);
+// --- ADDED: StarDisplay Component (from Trip) ---
+type StarDisplayProps = {
+    rating?: number;
+    size?: number;
+};
+const StarDisplay = ({ rating=0, size = 16 }: StarDisplayProps) => (
+  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+    {[1, 2, 3, 4, 5].map((star) => {
+      if (rating >= star) {
+        // Full star
+        return <MaterialIcons key={star} name="star" size={size} color={PALETTE.ratingStar} />;
+      }
+      if (rating >= star - 0.5) {
+        // Half star for decimal ratings
+        return <MaterialIcons key={star} name="star-half" size={size} color={PALETTE.ratingStar} />;
+      }
+      // Empty star
+      return <MaterialIcons key={star} name="star-border" size={size} color={PALETTE.ratingStar} />;
+    })}
+  </View>
+);
 
+export default function Request({request}: RequestProps) {
     const formattedDate = new Date(request.requiredByDate).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric'
+        month: 'short', day: 'numeric' // Shortened date
     });
+
+    const animation = useRef<LottieView>(null);
+    const [animationSpeed, setAnimationSpeed] = useState(1);
+
+    useEffect(() => {
+        // This effect runs on mount AND on every speed change
+        if (animationSpeed === 1) {
+            // Play forward: from frame 0 to the end (-1 is a special value for 'last frame')
+            animation.current?.play(0, -1);
+        } else {
+            // Play backward: from the end (-1) to frame 0
+            animation.current?.play(-1, 0);
+        }
+    }, [animationSpeed]); // This dependency array is correct
 
     const {user} = useUser();
     const currentUser = useQuery(api.users.getUserByClerkId, user ? {clerkId: user?.id} : "skip");
@@ -80,6 +130,7 @@ export default function Request({request}: RequestProps) {
     const [isEditModalVisible, setEditModalVisible] = useState(false);
     const [isOfferModalVisible, setOfferModalVisible] = useState(false);
     const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
+    const [isImageViewVisible, setImageViewVisible] = useState(false);
     const [proposedFee, setProposedFee] = useState(request.travelerFee.toFixed(2));
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -170,7 +221,11 @@ export default function Request({request}: RequestProps) {
         if (!request.productURL) return;
         
         try {
-            await WebBrowser.openBrowserAsync('https://' + request.productURL);
+            let url = request.productURL;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            await WebBrowser.openBrowserAsync(url);
         } catch (error) {
             Alert.alert(`Could not open this URL: ${request.productURL}`);
         }
@@ -180,77 +235,181 @@ export default function Request({request}: RequestProps) {
         <Animated.View style={cardStyles.cardContainer} entering={FadeIn.duration(500)}>
             {/* Confirmation Modals */}
             <Modal animationType='fade' transparent={true} visible={isDeleteModalVisible} onRequestClose={() => setDeleteModalVisible(false)}>
-                <View style={cardStyles.modalCenteredView}><View style={cardStyles.modalView}><Text style={cardStyles.modalTitle}>Confirm Deletion</Text><Text style={cardStyles.modalText}>Are you sure you want to delete this request? This action cannot be undone.</Text><View style={cardStyles.modalButtonContainer}><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setDeleteModalVisible(false)}><Text style={cardStyles.modalButtonText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleDeleteWithConfirmation}><Text style={cardStyles.modalButtonText}>Confirm</Text></TouchableOpacity></View></View></View>
+                <View style={cardStyles.modalCenteredView}>
+                    <View style={cardStyles.modalView}>
+                        <Text style={cardStyles.modalTitle}>Confirm Deletion</Text>
+                        <Text style={cardStyles.modalText}>Are you sure you want to delete this request? This action cannot be undone.</Text>
+                        <View style={cardStyles.modalButtonContainer}>
+                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setDeleteModalVisible(false)}>
+                                <Text style={cardStyles.modalButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonDestructive]} onPress={handleDeleteWithConfirmation}>
+                                <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>Confirm</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
             </Modal>
             <Modal animationType='fade' transparent={true} visible={isEditModalVisible} onRequestClose={() => setEditModalVisible(false)}>
-                <View style={cardStyles.modalCenteredView}><View style={cardStyles.modalView}><Text style={cardStyles.modalTitle}>Confirm Edit</Text><Text style={cardStyles.modalText}>Are you sure you want to edit this request? You will be taken to the editing screen.</Text><View style={cardStyles.modalButtonContainer}><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setEditModalVisible(false)}><Text style={cardStyles.modalButtonText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleEditWithConfirmation}><Text style={cardStyles.modalButtonText}>Confirm</Text></TouchableOpacity></View></View></View>
+                <View style={cardStyles.modalCenteredView}>
+                    <View style={cardStyles.modalView}>
+                        <Text style={cardStyles.modalTitle}>Confirm Edit</Text>
+                        <Text style={cardStyles.modalText}>Are you sure you want to edit this request? You will be taken to the editing screen.</Text>
+                        <View style={cardStyles.modalButtonContainer}>
+                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setEditModalVisible(false)}>
+                                <Text style={cardStyles.modalButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleEditWithConfirmation}>
+                                <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>Confirm</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
             </Modal>
+
+            {/* Image Viewer Modal */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={isImageViewVisible}
+                onRequestClose={() => setImageViewVisible(false)}>
+                <Pressable style={cardStyles.imageViewerBackdrop} onPress={() => setImageViewVisible(false)}>
+                    <Image
+                        source={{ uri: `https://ts79.space/${request.imageKey}` }}
+                        style={cardStyles.imageViewerImage}
+                        contentFit="contain"
+                    />
+                </Pressable>
+            </Modal>
+
 
             {/* Card Header */}
             <View style={cardStyles.cardHeader}>
-                <Link href={`/user/${request.requester._id}`} asChild><TouchableOpacity style={cardStyles.travelerInfo}><Image source={{ uri: request.requester.image }} style={cardStyles.travelerAvatar} /><Text style={cardStyles.travelerName}>{request.requester.username}</Text></TouchableOpacity></Link>
+                <Link href={`/user/${request.requester._id}`} asChild>
+                    <TouchableOpacity style={cardStyles.travelerInfo}>
+                        <Image source={{ uri: request.requester.image }} style={cardStyles.travelerAvatar} />
+                        <Text style={cardStyles.travelerName}>{request.requester.username}</Text>
+                    </TouchableOpacity>
+                </Link>
                 <View style={cardStyles.headerActions}>
-                    {isOwner ? (<><TouchableOpacity onPress={() => setEditModalVisible(true)}><AntDesign name='edit' size={20} color={COLORS.grey} style={{ marginRight: 16 }} /></TouchableOpacity><TouchableOpacity onPress={() => setDeleteModalVisible(true)}><Ionicons name='trash-outline' size={20} color={COLORS.grey} /></TouchableOpacity></>) : (<TouchableOpacity><Ionicons name='ellipsis-horizontal' size={20} color={COLORS.white} /></TouchableOpacity>)}
+                    {isOwner ? (
+                        <>
+                            <TouchableOpacity onPress={() => setEditModalVisible(true)} style={cardStyles.actionIcon}>
+                                <MaterialCommunityIcons name='pencil-outline' size={22} color={PALETTE.textSecondary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setDeleteModalVisible(true)} style={cardStyles.actionIcon}>
+                                <MaterialCommunityIcons name='trash-can-outline' size={22} color={PALETTE.destructive} />
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <StarDisplay rating={request.requester.rating} />
+                    )}
                 </View>
             </View>
+
             
-            <View style={cardStyles.productHeaderContainer}>
-                <Text style={cardStyles.productName}>{request.productName}</Text>
-                {request.productURL && (
-                    <TouchableOpacity style={cardStyles.productLinkButton} onPress={handleProductLink}>
-                        <Ionicons name="link-outline" size={16} color={COLORS.primary} />
-                        <Text style={cardStyles.productLinkText}>View Product</Text>
+            {/* --- UPDATED: Product "Bento Box" Layout --- */}
+            <View style={cardStyles.productBentoContainer}>
+                {/* Left Side: Product Info + COMPACT DETAILS "PILLS" */}
+                <View style={cardStyles.productInfoContainer}>
+                    <Text style={cardStyles.productName} numberOfLines={3}>{request.productName}</Text>
+                    {request.productURL && (
+                        <TouchableOpacity style={cardStyles.productLinkButton} onPress={handleProductLink}>
+                            <Ionicons name="link-outline" size={16} color={REQUEST_PALETTE.primary} />
+                            <Text style={cardStyles.productLinkText}>View Product</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* --- NEW: Compact Details "Pills" Row --- */}
+                    <View style={cardStyles.pillsContainer}>
+                        {/* Deliver By */}
+                        <View style={cardStyles.pillItem}>
+                            <MaterialCommunityIcons name="calendar-clock" size={14} color={REQUEST_PALETTE.primary} />
+                            <Text style={cardStyles.pillText}>By: {formattedDate}</Text>
+                        </View>
+
+                        {/* Quantity */}
+                        <View style={cardStyles.pillItem}>
+                            <MaterialCommunityIcons name="package-variant-closed" size={14} color={REQUEST_PALETTE.primary} />
+                            <Text style={cardStyles.pillText}>Qty: {request.quantity}</Text>
+                        </View>
+
+                        {/* Weight */}
+                        {request.productWeight && 
+                            <View style={cardStyles.pillItem}>
+                                <FontAwesome5 name="weight-hanging" size={12} color={REQUEST_PALETTE.primary} />
+                                <Text style={cardStyles.pillText}>Wt: {request.productWeight}</Text>
+                            </View>
+                        }
+
+                        {/* Category */}
+                        {request.itemTypes && 
+                            <View style={cardStyles.pillItem}>
+                                <MaterialCommunityIcons name="tag-outline" size={14} color={REQUEST_PALETTE.primary} />
+                                <Text style={cardStyles.pillText}>{request.itemTypes}</Text>
+                            </View>
+                        }
+                    </View>
+                </View>
+
+                {/* Right Side: Product Image (Pressable) */}
+                {request.imageKey && (
+                    <TouchableOpacity 
+                        style={cardStyles.productImageContainer} 
+                        onPress={() => setImageViewVisible(true)}
+                    >
+                        <Image
+                            source={{ uri: `https://ts79.space/${request.imageKey}` }}
+                            style={cardStyles.productImage}
+                            contentFit="cover"
+                            transition={300}
+                        />
                     </TouchableOpacity>
                 )}
             </View>
 
-            {/* TRAVEL ROUTE */}
+
+            {/* TRAVEL ROUTE (UPDATED) */}
             <View style={cardStyles.travelRouteContainer}>
                 <View style={cardStyles.locationPoint}><CountryFlag isoCode={request.originCountryCode.toLowerCase()} size={18} /><Text style={cardStyles.cityText}>{request.originCity}</Text><Text style={cardStyles.countryText}>{request.originCountry}</Text></View>
-                <View style={cardStyles.routeLine}><View style={cardStyles.dot} /><View style={cardStyles.dashedLine} /><LottieView ref={animation} style={cardStyles.lottiePlane} source={require('@/assets/animations/airplane.json')} autoPlay loop /><View style={cardStyles.dashedLine} /><View style={cardStyles.dot} /></View>
+                <View style={cardStyles.routeLine}>
+                    <View style={cardStyles.dot} />
+                    <View style={cardStyles.dashedLine} />
+                    <LottieView
+                        ref={animation}
+                        style={cardStyles.lottieIcon}
+                        source={require('@/assets/animations/request-animation.json')}
+                        autoPlay={false} // Let useEffect handle all plays
+                        loop={false}
+                        speed={animationSpeed}
+                        onAnimationFinish={(isCancelled) => {
+                            if (!isCancelled) {
+                                setAnimationSpeed(prevSpeed => prevSpeed * -1); // This part is correct
+                            }
+                        }}
+                    />
+                    <View style={cardStyles.dashedLine} />
+                    <View style={cardStyles.dot} />
+                </View>
                 <View style={cardStyles.locationPoint}><CountryFlag isoCode={request.destinationCountryCode.toLowerCase()} size={18} /><Text style={cardStyles.cityText}>{request.destinationCity}</Text><Text style={cardStyles.countryText}>{request.destinationCountry}</Text></View>
             </View>
 
-            {/* FINANCIALS */}
-            <View style={cardStyles.financialsContainer}>
-                <View style={cardStyles.financialItem}>
+
+            {/* --- UPDATED: Financial Grid --- */}
+            <View style={cardStyles.financialGridContainer}>
+                {/* Traveler Reward */}
+                <View style={[cardStyles.financialGridItem, cardStyles.financialItem]}>
                     <Text style={cardStyles.financialLabel}>Traveler Reward</Text>
                     <Text style={cardStyles.rewardValue}>{formatCurrency(request.travelerFee)}</Text>
                 </View>
-                <View style={cardStyles.financialItem}>
+
+                {/* Product Price */}
+                <View style={[cardStyles.financialGridItem, cardStyles.financialItem]}>
                     <Text style={cardStyles.financialLabel}>Product Price</Text>
                     <Text style={cardStyles.financialValue}>{formatCurrency(itemTotal)}</Text>
                 </View>
             </View>
             
-            {/* DETAILS (Redesigned Dashboard Style) */}
-            <View style={cardStyles.detailsContainer}>
-                <View style={cardStyles.detailItem}>
-                    <MaterialCommunityIcons name="calendar-clock" size={20} color={COLORS.primary} style={{marginBottom: 4}}/>
-                    <Text style={cardStyles.detailValue} numberOfLines={1}>{formattedDate.split(',')[0]}</Text>
-                    <Text style={cardStyles.detailLabel}>DELIVER BY</Text>
-                </View>
-                <View style={cardStyles.detailItem}>
-                    <MaterialCommunityIcons name="package-variant-closed" size={20} color={COLORS.primary} style={{marginBottom: 4}}/>
-                    <Text style={cardStyles.detailValue}>{request.quantity}</Text>
-                    <Text style={cardStyles.detailLabel}>QUANTITY</Text>
-                </View>
-                {request.productWeight && 
-                    <View style={cardStyles.detailItem}>
-                        <FontAwesome5 name="weight-hanging" size={18} color={COLORS.primary} style={{marginBottom: 4}}/>
-                        <Text style={cardStyles.detailValue} numberOfLines={1}>{request.productWeight}</Text>
-                        <Text style={cardStyles.detailLabel}>WEIGHT</Text>
-                    </View>
-                }
-                {request.itemTypes && 
-                    <View style={cardStyles.detailItem}>
-                        <MaterialCommunityIcons name="tag-outline" size={20} color={COLORS.primary} style={{marginBottom: 4}}/>
-                        <Text style={cardStyles.detailValue} numberOfLines={1}>{request.itemTypes}</Text>
-                        <Text style={cardStyles.detailLabel}>CATEGORY</Text>
-                    </View>
-                }
-            </View>
-
             {/* DESCRIPTION */}
             {request.description && (
                 <View style={cardStyles.descriptionContainer}>
@@ -262,8 +421,12 @@ export default function Request({request}: RequestProps) {
             {/* Action Button */}
             {isPotentialTraveler && (
                 <Pressable onPress={handleOpenOfferModal} disabled={isLoadingTrips} style={{marginTop: 16}}>
-                    <LinearGradient colors={isLoadingTrips ? [COLORS.grey, COLORS.grey] : [COLORS.primary_light, COLORS.primary]} style={cardStyles.actionButton}>
-                        <FontAwesome5 name="hand-holding-usd" size={16} color={COLORS.white} />
+                    <LinearGradient 
+                        colors={isLoadingTrips ? [PALETTE.textSecondary, PALETTE.textSecondary] : REQUEST_PALETTE.primaryGradient} 
+                        style={cardStyles.actionButton}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    >
+                        <FontAwesome5 name="hand-holding-usd" size={16} color="#FFFFFF" />
                         <Text style={cardStyles.actionButtonText}>{isLoadingTrips ? 'Checking Trips...' : 'Offer Delivery'}</Text>
                     </LinearGradient>
                 </Pressable>
@@ -276,11 +439,15 @@ export default function Request({request}: RequestProps) {
                         <Text style={cardStyles.modalTitle}>Propose a Delivery Fee</Text>
                         <View style={cardStyles.modalInputContainer}>
                             <Text style={cardStyles.dollarSign}>$</Text>
-                            <TextInput style={cardStyles.modalInput} placeholder={request.travelerFee.toFixed(2)} placeholderTextColor={COLORS.grey} keyboardType="numeric" value={proposedFee} onChangeText={setProposedFee} autoFocus={true}/>
+                            <TextInput style={cardStyles.modalInput} placeholder={request.travelerFee.toFixed(2)} placeholderTextColor={PALETTE.textSecondary} keyboardType="numeric" value={proposedFee} onChangeText={setProposedFee} autoFocus={true}/>
                         </View>
                         <Pressable onPress={handleSubmitOffer} disabled={isSubmitting}>
-                            <LinearGradient colors={isSubmitting ? [COLORS.grey, COLORS.grey] : [COLORS.primary_light, COLORS.primary]} style={cardStyles.modalSubmitButton}>
-                                {isSubmitting ? <ActivityIndicator color={COLORS.white} /> : <Text style={cardStyles.modalButtonText}>Send Offer</Text>}
+                            <LinearGradient 
+                                colors={isSubmitting ? [PALETTE.textSecondary, PALETTE.textSecondary] : REQUEST_PALETTE.primaryGradient} 
+                                style={cardStyles.modalSubmitButton}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                            >
+                                {isSubmitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>Send Offer</Text>}
                             </LinearGradient>
                         </Pressable>
                     </Pressable>
@@ -291,50 +458,237 @@ export default function Request({request}: RequestProps) {
 }
 
 
+// --- STYLESHEET UPDATED ---
 const cardStyles = StyleSheet.create({
-    cardContainer: { backgroundColor: COLORS.card, borderRadius: 24, padding: 16, marginVertical: 8, marginHorizontal: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+    cardContainer: { 
+        backgroundColor: PALETTE.surface, 
+        borderRadius: 16, 
+        padding: 14, 
+        marginVertical: 10, 
+        marginHorizontal: 16, 
+        shadowColor: PALETTE.shadow, 
+        shadowOffset: { width: 0, height: 6 }, 
+        shadowOpacity: 0.35, 
+        shadowRadius: 18, 
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: PALETTE.border,
+    },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     travelerInfo: { flexDirection: 'row', alignItems: 'center' },
     travelerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
-    travelerName: { fontSize: 16, fontWeight: '600', color: COLORS.white },
+    travelerName: { fontSize: 16, fontWeight: '600', color: PALETTE.textPrimary },
     headerActions: { flexDirection: 'row', alignItems: 'center' },
-    productHeaderContainer: { marginBottom: 16 },
-    productName: { fontSize: 22, fontWeight: 'bold', color: COLORS.white },
+    actionIcon: { marginLeft: 16 }, 
+
+    // --- UPDATED: Product Bento Box Styles ---
+    productBentoContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 16,
+    },
+    productInfoContainer: {
+        flex: 1, // Takes up available space
+        marginRight: 12, // Space between text and image
+    },
+    productName: { fontSize: 22, fontWeight: 'bold', color: PALETTE.textPrimary, marginBottom: 4 },
     productLinkButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingVertical: 4, marginTop: 4 },
-    productLinkText: { color: COLORS.primary, fontWeight: '600', marginLeft: 6 },
+    productLinkText: { color: REQUEST_PALETTE.primary, fontWeight: '600', marginLeft: 6 },
+    productImageContainer: {
+        shadowColor: PALETTE.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 6,
+    },
+    productImage: {
+        width: 90,
+        height: 90,
+        borderRadius: 12,
+        backgroundColor: PALETTE.border,
+    },
+    // --- END: Product Bento Box Styles ---
+
+    // --- NEW: Compact "Pills" Styles (replaces compactDetailRow) ---
+    pillsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 12, // Space below the product link
+    },
+    pillItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: PALETTE.backgroundGradient[0], // Light grey
+        borderRadius: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        marginRight: 6,
+        marginBottom: 6, // For wrapping
+    },
+    pillText: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: PALETTE.textSecondary,
+        marginLeft: 5,
+    },
+    // --- END: Compact "Pills" Styles ---
+
     travelRouteContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     locationPoint: { alignItems: 'center', flex: 1, paddingHorizontal: 4 },
-    cityText: { fontSize: 16, fontWeight: 'bold', color: COLORS.white, marginTop: 4 },
-    countryText: { fontSize: 12, color: COLORS.grey },
+    cityText: { fontSize: 16, fontWeight: 'bold', color: PALETTE.textPrimary, marginTop: 4 },
+    countryText: { fontSize: 12, color: PALETTE.textSecondary },
     routeLine: { flex: 1.5, flexDirection: 'row', alignItems: 'center' },
-    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.grey },
-    dashedLine: { height: 1, flex: 1, borderBottomWidth: 1, borderBottomColor: COLORS.grey, borderStyle: 'dashed' },
-    lottiePlane: { width: 40, height: 40 },
-    financialsContainer: { marginTop: 16, flexDirection: 'row', justifyContent: 'space-around', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
-    financialItem: { alignItems: 'center', flex: 1 },
-    financialLabel: { color: COLORS.grey, fontSize: 12, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 },
-    financialValue: { color: COLORS.white, fontSize: 18, fontWeight: '600' },
-    rewardValue: { color: COLORS.reward, fontSize: 20, fontWeight: 'bold' },
-    detailsContainer: { marginTop: 16, flexDirection: 'row', justifyContent: 'space-around', borderBottomWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)', paddingBottom: 16 },
-    detailItem: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
-    detailValue: { fontSize: 13, fontWeight: '600', color: COLORS.white, textAlign: 'center' },
-    detailLabel: { fontSize: 10, color: COLORS.grey, textTransform: 'uppercase', fontWeight: 'bold', marginTop: 2 },
-    descriptionContainer: { marginTop: 12 },
-    descriptionText: { color: COLORS.grey, fontSize: 14, lineHeight: 21 },
-    readMoreText: { color: COLORS.primary, fontWeight: 'bold', marginTop: 4 },
-    actionButton: { borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
-    actionButtonText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
-    modalCenteredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)' },
-    modalView: { width: '85%', backgroundColor: COLORS.card, borderRadius: 20, padding: 25, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.white, marginBottom: 15 },
-    modalText: { marginBottom: 20, textAlign: 'center', color: COLORS.grey, lineHeight: 20 },
-    modalInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.dark, borderRadius: 10, paddingHorizontal: 15, marginBottom: 20, width: '100%' },
-    dollarSign: { fontSize: 20, color: COLORS.grey, marginRight: 5 },
-    modalInput: { flex: 1, color: COLORS.white, fontSize: 20, paddingVertical: 12 },
-    modalSubmitButton: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', width: 200 },
-    modalButtonContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 10 },
-    modalButton: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, flex: 1, marginHorizontal: 5, alignItems: 'center' },
-    modalButtonCancel: { backgroundColor: COLORS.grey },
-    modalButtonConfirm: { backgroundColor: COLORS.primary },
-    modalButtonText: { color: 'white', fontWeight: 'bold', textAlign: 'center' },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: PALETTE.textSecondary },
+    dashedLine: { height: 1, flex: 1, borderBottomWidth: 1, borderBottomColor: PALETTE.textSecondary, borderStyle: 'dashed' },
+    routeIcon: { marginHorizontal: 10 },
+
+    // --- UPDATED: Renamed to Financial Grid Styles ---
+    financialGridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: PALETTE.border,
+        paddingTop: 16,
+    },
+    financialGridItem: { 
+        width: '48%',
+        backgroundColor: PALETTE.backgroundGradient[0],
+        borderRadius: 12, 
+        padding: 10, 
+        alignItems: 'center', 
+        marginBottom: 12, 
+    },
+    financialItem: { 
+        backgroundColor: `${REQUEST_PALETTE.primary}10`,
+    },
+    financialLabel: { color: PALETTE.textSecondary, fontSize: 12, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 },
+    financialValue: { color: PALETTE.textPrimary, fontSize: 18, fontWeight: '600' },
+    rewardValue: { color: REQUEST_PALETTE.reward, fontSize: 20, fontWeight: 'bold' },
+    
+    // REMOVED: detailValue and detailLabel are no longer used
+    
+    descriptionContainer: { 
+        marginTop: 4, 
+        borderTopWidth: 1, 
+        borderTopColor: PALETTE.border,
+        paddingTop: 16, 
+    },
+    descriptionText: { color: PALETTE.textSecondary, fontSize: 14, lineHeight: 21 },
+    readMoreText: { color: REQUEST_PALETTE.primary, fontWeight: 'bold', marginTop: 4 },
+    actionButton: { 
+        borderRadius: 12, 
+        paddingVertical: 12, 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        flexDirection: 'row',
+        shadowColor: REQUEST_PALETTE.primary, 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.3, 
+        shadowRadius: 5, 
+        elevation: 8 
+    },
+    actionButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
+    modalCenteredView: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: 'rgba(0, 0, 0, 0.5)' 
+    },
+    modalView: { 
+        width: '85%',
+        margin: 20, 
+        backgroundColor: PALETTE.surface, 
+        borderRadius: 16, 
+        padding: 25, 
+        alignItems: 'center', 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 2 }, 
+        shadowOpacity: 0.25, 
+        shadowRadius: 4, 
+        elevation: 5,
+    },
+    modalTitle: { 
+        marginBottom: 15, 
+        textAlign: 'center', 
+        fontSize: 18, 
+        fontWeight: 'bold', 
+        color: PALETTE.textPrimary 
+    },
+    modalText: { 
+        marginBottom: 20, 
+        textAlign: 'center', 
+        color: PALETTE.textSecondary, 
+        lineHeight: 20 
+    },
+    modalInputContainer: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: PALETTE.backgroundGradient[0],
+        borderRadius: 10, 
+        paddingHorizontal: 15, 
+        marginBottom: 20, 
+        width: '100%' 
+    },
+    dollarSign: { fontSize: 20, color: PALETTE.textSecondary, marginRight: 5 },
+    modalInput: { flex: 1, color: PALETTE.textPrimary, fontSize: 20, paddingVertical: 12 },
+    modalSubmitButton: { 
+        borderRadius: 12, 
+        paddingVertical: 14, 
+        alignItems: 'center', 
+        width: 200,
+        shadowColor: REQUEST_PALETTE.primary, 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.3, 
+        shadowRadius: 5, 
+        elevation: 8
+    },
+    modalButtonContainer: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        width: '100%', 
+        marginTop: 10 
+    },
+    modalButton: { 
+        borderRadius: 10, 
+        paddingVertical: 10, 
+        paddingHorizontal: 20, 
+        flex: 1, 
+        marginHorizontal: 5, 
+        alignItems: 'center' 
+    },
+    modalButtonCancel: { 
+        backgroundColor: PALETTE.border 
+    },
+    modalButtonConfirm: { 
+        backgroundColor: REQUEST_PALETTE.primary 
+    },
+    modalButtonDestructive: { 
+        backgroundColor: PALETTE.destructive
+    },
+    modalButtonText: { 
+        color: PALETTE.textSecondary, 
+        fontWeight: 'bold', 
+        textAlign: 'center' 
+    },
+
+    // --- NEW: Image Viewer Modal Styles ---
+    imageViewerBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imageViewerImage: {
+        width: '90%',
+        height: '80%',
+        borderRadius: 12,
+    },
+    lottieIcon: { 
+        width: 40,
+        height: 40,
+        marginHorizontal: 5,
+    },
 });
