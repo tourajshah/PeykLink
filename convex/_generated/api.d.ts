@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as offers from "../offers.js";
@@ -33,6 +34,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   http: typeof http;
   messages: typeof messages;
   offers: typeof offers;

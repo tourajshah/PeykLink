@@ -327,7 +327,7 @@ export default function OfferDetailScreen() {
 
                         const BubbleContent = (
                             <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, styles.chatBubble]}>
-                                <Text style={[styles.chatText, isMe ? styles.myBubbleText : styles.theirBubbleText]}>{msg.message}</Text>
+                                <Text style={[styles.chatText, isMe ? styles.myBubbleText : styles.theirBubbleText]}>{msg.text}</Text>
                                 <Text style={[styles.bubbleTime, isMe ? styles.myBubbleText : styles.theirBubbleText]}>{formatRelativeTime(msg._creationTime)}</Text>
                             </View>
                         );

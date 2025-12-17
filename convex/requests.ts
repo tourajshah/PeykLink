@@ -1,8 +1,11 @@
 import { cityData } from '@/constants/cityData';
+import { R2 } from '@convex-dev/r2';
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { components, internal } from './_generated/api';
+import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
 
+const r2 = new R2(components.r2)
 
 export const generateUploadUrl = mutation(async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -24,7 +27,7 @@ export const createRequest = mutation({
         originCity: v.string(),
         destinationCountry: v.string(), 
         destinationCity: v.string(),
-        requiredByDate: v.string(),
+        requiredByDate: v.float64(),
         description: v.optional(v.string()),
         itemTypes: v.optional(v.string()),
         visibility: v.union(v.literal("public"), v.literal("direct")),
@@ -51,7 +54,7 @@ export const createRequest = mutation({
             destinationCountry: args.destinationCountry, 
             destinationCity: args.destinationCity,
             requiredByDate: args.requiredByDate,
-            status: "active",
+            status: "pending",
             description: args.description,
             itemTypes: args.itemTypes,
             visibility: args.visibility,
@@ -68,11 +71,11 @@ export const getFeedRequests = query ({
 
         const currentUser = await getAuthenticatedUser(ctx)
 
-        // get all requests form db
+        // get all requests form db that are public and still active (pending)
 
         const requests = await ctx.db
           .query("requests")
-          .filter((q) => q.eq(q.field("visibility"), "public"))
+          .filter((q) => q.and (q.eq(q.field("visibility"), "public"), q.eq(q.field("status"), "pending")))
           .order("desc")
           .collect()
 
@@ -133,7 +136,7 @@ export const deleteRequest = mutation({
 
         // delete request
 
-        await ctx.db.delete(args.requestId)
+        await ctx.db.patch(args.requestId, {status : "deleted", deletedAt : Date.now()})
         
     }
 })
@@ -184,7 +187,7 @@ export const updateRequest = mutation({
     productURL: v.optional(v.string()),
     quantity: v.number(),
     travelerFee: v.number(),
-    requiredByDate: v.string(),
+    requiredByDate: v.float64(),
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -205,7 +208,7 @@ export const updateRequest = mutation({
       productURL?: string,
       quantity?: number,
       travelerFee?: number,
-      requiredByDate?: string,
+      requiredByDate?: number,
       description?: string,
     } = {}
 
@@ -219,7 +222,7 @@ export const updateRequest = mutation({
 
     return { success: true};
   },
-})
+});
 
 
 export const createDirectRequestAndOffer = mutation({
@@ -237,7 +240,7 @@ export const createDirectRequestAndOffer = mutation({
         originCity: v.string(),
         destinationCountry: v.string(),
         destinationCity: v.string(),
-        requiredByDate: v.string(),
+        requiredByDate: v.float64(),
         description: v.optional(v.string()),
         itemTypes: v.optional(v.string()),
         
@@ -265,7 +268,7 @@ export const createDirectRequestAndOffer = mutation({
             destinationCountry: args.destinationCountry,
             destinationCity: args.destinationCity,
             requiredByDate: args.requiredByDate,
-            status: "active", // "negotiating" status
+            status: "pending", // "negotiating" status
             description: args.description,
             itemTypes: args.itemTypes,
             visibility: "direct",
@@ -295,3 +298,81 @@ export const createDirectRequestAndOffer = mutation({
 });
 
 
+export const cleanupDeletedRequests = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // check cutoff / delete requested date (> 7 days ago)
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const cutoffDate = Date.now() - SEVEN_DAYS_MS;
+    // query to find items that are in trash can and older than cutoff (7 days)
+    const trashItems = await ctx.runQuery(internal.requests.getItemsReadyForHardDelete, {cutoffDate})
+
+    console.log(`Janitor Found ${trashItems.length} items that are more than 7 days old to permanently delete.`)
+
+    for (const request of trashItems) {
+      try {
+        // delete image of request from R2
+        if (request.imageKey) {
+          console.log(`Deleting image from R2: ${request.imageKey}`);
+          await r2.deleteObject(ctx, request.imageKey);
+        }
+        // delete request from DB
+        await ctx.runMutation(internal.requests.hardDeleteRecord, {requestId: request._id});
+
+        console.log(`Permanently deleted request ${request._id}`);
+
+      } catch (error) {
+
+        console.error(`Failed to cleanup request ${request._id}:`, error);
+      }
+    }
+  }
+})
+
+
+export const getItemsReadyForHardDelete = internalQuery({
+  args: { cutoffDate: v.float64() },
+  handler: async (ctx, args) => {
+    const deleteRequest = await ctx.db
+      .query("requests")
+      .withIndex("by_status", (q) => q.eq("status", "deleted"))
+      .collect();
+
+      // if deleted items are getting larger , make a new index to schema with deletedAt
+    return deleteRequest.filter((r) => (r.deletedAt || 0) < args.cutoffDate);
+
+  },
+})
+
+
+export const hardDeleteRecord = internalMutation({
+  args: { requestId: v.id("requests") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.requestId)
+  }
+})
+
+
+export const archiveExpired = internalMutation({
+  args:{},
+  handler: async (ctx) => {
+    const now = Date.now();
+    // find all the pending requests that are passed their delivery required time
+    const expiredRequests = await ctx.db
+      .query("requests")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .filter((q) => q.lt(q.field("requiredByDate"), now))
+      .take(100) // checks in batches of size 100 every 24 hour (crons) , because if it get bigger it might crash the server
+
+    if (expiredRequests.length > 0) {
+      console.log(`Archiving ${expiredRequests.length} expired requests...`)
+
+      for (const request of expiredRequests) {
+        await ctx.db.patch(request._id, {status: "archived"}) 
+        // we dont touch the image ! we keep it for history and record
+      }
+
+      console.log("Archiving complete.")
+    }
+  }
+})

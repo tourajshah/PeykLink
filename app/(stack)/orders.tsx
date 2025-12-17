@@ -254,7 +254,7 @@ export default function RequestsScreen() {
                 travelerFee: parseFloat(travelerFee),
                 originCountry: origin!.country, originCity: origin!.name,
                 destinationCountry: destination!.country, destinationCity: destination!.name,
-                requiredByDate: requiredByDate.toISOString().split('T')[0],
+                requiredByDate: requiredByDate.getTime(),
                 productWeight: `${productWeight} ${weightUnit}`,
                 itemTypes: selectedItemTypes.join(', '),
                 description,
@@ -267,7 +267,7 @@ export default function RequestsScreen() {
                     quantity: parseInt(quantity, 10),
                     productURL,
                     travelerFee: parseFloat(travelerFee),
-                    requiredByDate: requiredByDate.toISOString().split('T')[0],
+                    requiredByDate: requiredByDate.getTime(),
                 });
                 Alert.alert('Success!', 'Your request has been updated.');
             } else if (isDirectMode) {

@@ -255,7 +255,7 @@ export const acceptOffer = mutation({
         });
 
         // 2. Mark the parent request as "confirmed"
-        await ctx.db.patch(negotiation.requestId, { status: "confirmed" });
+        await ctx.db.patch(negotiation.requestId, { status: "completed" });
         
         // (Future Step): Here you would create an `order` and initiate payment.
     },
@@ -289,7 +289,7 @@ export const rejectOffer = mutation({
             proposedFee: rejectedOffer.proposedFee
         });
         // You might also want to change the request status back to "active"
-        await ctx.db.patch(negotiation.requestId, { status: "active" });
+        await ctx.db.patch(negotiation.requestId, { status: "pending" });
     },
 });
 
@@ -321,7 +321,7 @@ export const cancelOffer = mutation({
             proposedFee: cancelledOffer.proposedFee
         });
         // You might also want to change the request status back to "active"
-        await ctx.db.patch(negotiation.requestId, { status: "active" });
+        await ctx.db.patch(negotiation.requestId, { status: "pending" });
     },
 });
 

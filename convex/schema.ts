@@ -27,14 +27,23 @@ export default defineSchema({
         originCity: v.string(),
         destinationCountry: v.string(), 
         destinationCity: v.string(),
-        requiredByDate: v.string(),
-        status: v.string(),
+        requiredByDate: v.float64(),
+        status: v.union(
+            v.literal("pending"),   // Request is created , or a negotiation is cancelled before exp date
+            v.literal("in_progress"),  // Request is in progress of being completed
+            v.literal("completed"),  // Requester is delivered and deal is done
+            v.literal("archived"),  // Request is done or exp date is passed
+            v.literal("deleted"),  // Request is deletedby requested (has to wait few days)
+        ),   
+        
+        deletedAt: v.optional(v.float64()),
         description: v.optional(v.string()),
         itemTypes: v.optional(v.string()),
         visibility: v.union(v.literal("public"), v.literal("direct")),
         targetedTravelerId: v.optional(v.id("users")), // Who is this direct request for?
 
-    }).index("by_requesterId", ["requesterId"]),
+    }).index("by_requesterId", ["requesterId"])
+      .index("by_status", ["status"]),
 
     trips: defineTable({
         travelerId: v.id("users"),
@@ -42,13 +51,19 @@ export default defineSchema({
         originCity: v.string(),
         destinationCountry: v.string(),
         destinationCity: v.string(),
-        arrivalDate: v.string(),
+        arrivalDate: v.float64(),
         availableSpace: v.string(),
-        status: v.string(),
+        status: v.union(
+            v.literal("pending"),   // Trip is created 
+            v.literal("archived"),  // Trip is done or exp date is passed
+            v.literal("deleted"),  // Trip is deleted by traveller (has to wait few days)
+        ),   
+        deletedAt: v.optional(v.float64()),
         acceptedItemTypes: v.optional(v.string()),
         airline: v.string(),
 
-    }).index("by_travelerId", ["travelerId"]),
+    }).index("by_travelerId", ["travelerId"])
+      .index("by_status", ["status"]),
 
     negotiations: defineTable({
         requestId: v.id("requests"), // The item being requested (The "What")
@@ -123,8 +138,14 @@ export default defineSchema({
         revieweeId: v.id("users"),
         rating: v.number(),
         comment: v.optional(v.string()),
+        status: v.union(
+            v.literal("hidden"),
+            v.literal("public")
+        ),
+        createdAt: v.float64(),
     }).index("by_negotiationId", ["negotiationId"])
-      .index("by_revieweeId", ["revieweeId"]),
+      .index("by_revieweeId", ["revieweeId"])
+      .index("by_status", ["status"]),
 
 
     messages: defineTable({

@@ -26,7 +26,8 @@ export const sendMessage = mutation ({
         await ctx.db.insert("messages", {
             negotiationId: args.negotiationId,
             senderId: currentUser._id,
-            message: args.message,
+            type: "text",
+            text: args.message,
         })
     }
 })

@@ -1,5 +1,6 @@
 import { v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { internal } from './_generated/api';
+import { internalAction, internalMutation, internalQuery, mutation, query } from './_generated/server';
 import { getAuthenticatedUser } from "./users";
 
 
@@ -50,6 +51,7 @@ export const getUserReviews = query({
     const reviews = await ctx.db
       .query("reviews")
       .withIndex("by_revieweeId", (q) => q.eq("revieweeId", args.id))
+      .filter((q) => q.eq(q.field("status"), "public") )
       .order("desc") // Show newest reviews first
       .collect();
     
@@ -105,6 +107,8 @@ export const createReview = mutation({
     negotiationId: v.id('negotiations'),
     overallRating: v.number(),
     comment: v.optional(v.string()),
+    status: v.string(),
+    createdAt: v.float64(),
     communicationRating: v.number(),
     punctualityRating: v.number(),
     itemConditionRating: v.number(),
@@ -141,6 +145,8 @@ export const createReview = mutation({
       revieweeId: revieweeId,
       rating: args.overallRating,
       comment: args.comment,
+      status: "hidden",
+      createdAt: args.createdAt
     });
 
     // 2. Recalculate and update the average rating for the user who was reviewed
@@ -159,3 +165,52 @@ export const createReview = mutation({
     return { success: true };
   },
 });
+
+
+export const makeReviewsPublic = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // review date (> 3 days ago)
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+    const reviewDate = Date.now() - THREE_DAYS_MS;
+    
+    // query to find reviews that are older than 3 days
+    const reviewBucket = await ctx.runQuery(internal.reviews.reviewBucket, {reviewDate})
+
+    console.log(`Janitor Found ${reviewBucket.length} hidden reviews that are more than 3 days old to share and make public.`)
+
+    for (const review of reviewBucket) {
+      try {
+        // change status
+        await ctx.runMutation(internal.reviews.changeReviewStatus, {reviewId: review._id});
+
+        console.log(`Changed status of review ${review._id}`);
+
+      } catch (error) {
+
+        console.error(`Failed to change status of review ${review._id}:`, error);
+      }
+    }
+  }
+})
+
+export const reviewBucket = internalQuery({
+  args: { reviewDate: v.float64() },
+  handler: async (ctx, args) => {
+    const reviews = await ctx.db
+      .query("reviews")
+      .withIndex("by_status", (q) => q.eq("status", "hidden"))
+      .collect();
+
+      // if number of reviews are getting larger , make a new index to schema
+    return reviews.filter((r) => (r.createdAt || 0) < args.reviewDate);
+
+  },
+})
+
+export const changeReviewStatus = internalMutation({
+  args: { reviewId: v.id("reviews") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.reviewId, {status: "public"})
+  }
+})

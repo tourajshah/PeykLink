@@ -1,6 +1,7 @@
 import { cityData } from '@/constants/cityData';
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internal } from './_generated/api';
+import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
 
 
@@ -19,7 +20,7 @@ export const createTrip = mutation({
         originCity: v.string(),
         destinationCountry: v.string(),
         destinationCity: v.string(),
-        arrivalDate: v.string(),
+        arrivalDate: v.float64(),
         availableSpace: v.string(),
         acceptedItemTypes: v.optional(v.string()),
         airline: v.string(),
@@ -39,7 +40,7 @@ export const createTrip = mutation({
             destinationCity: args.destinationCity,
             arrivalDate: args.arrivalDate,
             availableSpace: args.availableSpace,
-            status: "active",
+            status: "pending",
             acceptedItemTypes: args.acceptedItemTypes,
             airline: args.airline,
 
@@ -56,7 +57,9 @@ export const getFeedTrips = query ({
 
         // get all trips form db
 
-        const trips = await ctx.db.query("trips").order("desc").collect()
+        const trips = await ctx.db.query("trips")
+        .filter((q)=> q.eq(q.field("status"), "pending"))
+        .order("desc").collect()
 
         if(trips.length === 0) return []
 
@@ -111,7 +114,7 @@ export const deleteTrip = mutation({
 
         // delete trip
 
-        await ctx.db.delete(args.tripId)
+        await ctx.db.patch(args.tripId, {status : "deleted", deletedAt : Date.now()})
         
     }
 })
@@ -342,4 +345,79 @@ export const getRecommendedRequests = query({
         return matchingRequestsWithInfo.filter((request): request is NonNullable<typeof request> => request !== null)     
     }
 
+})
+
+
+
+export const cleanupDeletedTrips = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // check cutoff / delete trip date (> 7 days ago)
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const cutoffDate = Date.now() - SEVEN_DAYS_MS;
+    // query to find items that are in trash can and older than cutoff (7 days)
+    const trashItems = await ctx.runQuery(internal.trips.getItemsReadyForHardDelete, {cutoffDate})
+
+    console.log(`Janitor Found ${trashItems.length} items that are more than 7 days old to permanently delete.`)
+
+    for (const trip of trashItems) {
+      try {
+        // delete request from DB
+        await ctx.runMutation(internal.trips.hardDeleteRecord, {tripId: trip._id});
+
+        console.log(`Permanently deleted trip ${trip._id}`);
+
+      } catch (error) {
+
+        console.error(`Failed to cleanup trip ${trip._id}:`, error);
+      }
+    }
+  }
+})
+
+
+export const getItemsReadyForHardDelete = internalQuery({
+  args: { cutoffDate: v.float64() },
+  handler: async (ctx, args) => {
+    const deleteTrip = await ctx.db
+      .query("trips")
+      .withIndex("by_status", (q) => q.eq("status", "deleted"))
+      .collect();
+
+      // if deleted items are getting larger , make a new index to schema with deletedAt
+    return deleteTrip.filter((t) => (t.deletedAt || 0) < args.cutoffDate);
+
+  },
+})
+
+
+export const hardDeleteRecord = internalMutation({
+  args: { tripId: v.id("trips") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.tripId)
+  }
+})
+
+
+export const archiveExpired = internalMutation({
+  args:{},
+  handler: async (ctx) => {
+    const now = Date.now();
+    // find all the pending trips that are passed their flight time
+    const expiredTrips = await ctx.db
+      .query("trips")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .filter((q) => q.lt(q.field("arrivalDate"), now))
+      .take(100) // checks in batches of size 100 every 24 hour (crons) , because if it get bigger it might crash the server
+
+    if (expiredTrips.length > 0) {
+      console.log(`Archiving ${expiredTrips.length} expired trips...`)
+
+      for (const trip of expiredTrips) {
+        await ctx.db.patch(trip._id, {status: "archived"}) 
+      }
+
+      console.log("Archiving complete.")
+    }
+  }
 })
