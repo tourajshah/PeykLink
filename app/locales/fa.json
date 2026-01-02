@@ -1,0 +1,430 @@
+{
+  "welcome_back": "خوش آمدید،",
+  "where_to": "کجا؟",
+  "filter_route": "فیلتر مسیر",
+  "clear": "پاک کردن",
+  "origin_city": "شهر مبدا",
+  "destination_city": "شهر مقصد",
+  "filter_categories": "فیلتر دسته‌بندی‌ها",
+  "filtered": "فیلتر شده",
+  "trips": "سفرها",
+  "requests": "درخواست‌ها",
+  "no_items_found": "هیچ {{type}} یافت نشد",
+  "no_items_subtitle": "هیچ {{type}} فعالی با جستجوی شما مطابقت ندارد.\nفیلترهای خود را تغییر دهید.",
+  "categories": {
+    "Electronics": "الکترونیک",
+    "Clothing": "پوشاک",
+    "Documents": "اسناد",
+    "Books": "کتاب‌ها",
+    "Cosmetics": "لوازم آرایشی",
+    "Pets": "حیوانات خانگی",
+    "Cigars": "سیگار برگ",
+    "Medication": "دارو"
+  },
+  "create_new": "ایجاد جدید",
+  "connect_prompt": "امروز چطور می‌خواهید ارتباط برقرار کنید؟",
+  "post_trip": "ثبت سفر",
+  "post_trip_desc": "به زودی سفر می‌کنید؟ با تحویل کالا هزینه‌هایتان را جبران کنید.",
+  "earn_money": "کسب درآمد",
+  "meet_locals": "ملاقات با افراد محلی",
+  "make_request": "ثبت درخواست",
+  "make_request_desc": "نمی‌توانید محلی پیدا کنید؟ کالاها را از هر جای دنیا دریافت کنید.",
+  "shop_global": "خرید جهانی",
+  "secure_escrow": "پرداخت امن (Escrow)",
+  "footer_trust": "پرداخت‌های امن • مسافران تایید شده",
+  "explore": {
+    "title": "کاوش",
+    "subtitle": "سفرهایتان را به درآمد تبدیل کنید.",
+    "network": "شبکه شما",
+    "matched_travelers": "مسافران منطبق",
+    "open_requests": "درخواست‌های باز",
+    "incoming_travelers": "مسافران ورودی",
+    "incoming_desc": "افرادی که به شهر شما پرواز می‌کنند.",
+    "delivery_jobs": "کارهای تحویل",
+    "delivery_desc": "با تحویل کالا در سفرهایتان درآمد کسب کنید.",
+    "potential_earnings": "درآمد بالقوه"
+  },
+  "cards": {
+    "requesting_item": "درخواست کالا",
+    "due_date": "مهلت {{date}}",
+    "item_price": "قیمت کالا:",
+    "reward": "پاداش",
+    "total_cost": "هزینه کل",
+    "make_offer": "ارائه پیشنهاد",
+    "available": "موجود",
+    "for_requests": "برای درخواست‌ها",
+    "request_delivery": "درخواست تحویل",
+    "traveler_default": "مسافر"
+  },
+  "empty_states": {
+    "no_incoming": "مسافر ورودی یافت نشد",
+    "scanning_network": "ما در حال جستجوی شبکه برای سفرهای منطبق با موقعیت شما هستیم.",
+    "create_request": "ایجاد درخواست",
+    "no_jobs": "کار تحویلی موجود نیست",
+    "unlock_earnings": "سفر پیش رو خود را ثبت کنید تا درخواست‌های تحویل باز شوند.",
+    "create_trip": "ایجاد سفر"
+  },
+  "alerts": {
+    "no_matching_trip": "سفر منطبق یافت نشد",
+    "need_trip_msg": "برای ارائه پیشنهاد به سفری از {{origin}} به {{dest}} نیاز دارید.",
+    "invalid_fee": "مبلغ نامعتبر",
+    "enter_valid_amount": "لطفاً مبلغ معتبری وارد کنید.",
+    "offer_exists": "پیشنهاد وجود دارد",
+    "offer_exists_msg": "شما قبلاً برای این مورد پیشنهادی ارسال کرده‌اید.",
+    "error": "خطا",
+    "send_offer_error": "ارسال پیشنهاد انجام نشد."
+  },
+  "modals": {
+    "make_offer_title": "ارائه پیشنهاد",
+    "make_offer_subtitle": "برای تحویل این مورد چه مقدار می‌خواهید دریافت کنید؟",
+    "send_offer_btn": "ارسال پیشنهاد"
+  },
+  "profile": {
+    "title": "پروفایل",
+    "joined": "عضویت {{date}}",
+    "edit_profile": "ویرایش پروفایل",
+    "tabs": {
+      "traveler": "مسافر",
+      "shopper": "خریدار"
+    },
+    "stats": {
+      "deliveries": "تحویل‌ها",
+      "orders": "سفارش‌ها",
+      "rating": "امتیاز",
+      "reliability": "اعتبار",
+      "new": "جدید"
+    },
+    "filter": {
+      "active": "فعال",
+      "history": "تاریخچه",
+      "reviews": "نظرات"
+    },
+    "subtitle": {
+      "reviews": "{{count}} نظر به عنوان {{role}}",
+      "items": "{{count}} مورد {{status}} یافت شد"
+    },
+    "toast": {
+      "username_copied": "نام کاربری کپی شد"
+    },
+    "share_msg": "پروفایل {{name}} را در GrabrApp بررسی کنید!",
+    "modals": {
+      "edit": {
+        "title": "ویرایش پروفایل",
+        "fullname_label": "نام کامل",
+        "fullname_placeholder": "نام شما",
+        "bio_label": "بیوگرافی",
+        "bio_placeholder": "درباره خودتان بگویید...",
+        "save_btn": "ذخیره تغییرات"
+      },
+      "wallet": {
+        "title": "تاریخچه تراکنش‌ها",
+        "empty_title": "هنوز تراکنشی وجود ندارد",
+        "empty_desc": "هنگامی که تحویلی را کامل کنید یا وجهی برداشت کنید، تاریخچه شما در اینجا ظاهر می‌شود.",
+        "fund_btn": "افزایش موجودی (به زودی)"
+      }
+    },
+    "empty": {
+      "no_reviews": "هنوز نظری وجود ندارد",
+      "no_active": "مورد فعالی نیست",
+      "archive_empty": "آرشیو خالی است",
+      "desc_reviews": "شما هنوز بازخوردی از جامعه دریافت نکرده‌اید.",
+      "desc_active": "در حال حاضر هیچ {{type}} فعالی ندارید.",
+      "desc_archive": "موارد تکمیل شده یا آرشیو شده شما در اینجا ظاهر خواهند شد."
+    }
+  },
+  "inbox": {
+    "title": "صندوق پیام",
+    "search_placeholder": "جستجوی کالا یا کاربر...",
+    "tabs": {
+      "all": "همه",
+      "sent": "ارسال شده",
+      "received": "دریافت شده"
+    },
+    "status": {
+      "found_result": "{{count}} نتیجه یافت شد",
+      "found_results": "{{count}} نتیجه یافت شد",
+      "showing_chat": "نمایش {{count}} چت فعال",
+      "showing_chats": "نمایش {{count}} چت فعال"
+    },
+    "empty": {
+      "no_messages": "پیامی نیست",
+      "no_new_negotiations": "مذاکرات جدید در اینجا ظاهر می‌شوند.",
+      "no_results": "نتیجه‌ای یافت نشد",
+      "adjust_search": "عبارات جستجوی خود را تغییر دهید.",
+      "no_sent": "پیشنهاد ارسالی وجود ندارد",
+      "no_sent_desc": "پیشنهادهایی که به مسافران/خریداران داده‌اید در اینجا نمایش داده می‌شوند.",
+      "no_received": "پیشنهاد دریافتی وجود ندارد",
+      "no_received_desc": "پیشنهادهایی که از دیگران دریافت کرده‌اید در اینجا نمایش داده می‌شوند."
+    }
+  },
+  "create_trip": {
+    "title_edit": "ویرایش سفر",
+    "title_plan": "برنامه‌ریزی سفر",
+    "btn_save": "ذخیره تغییرات",
+    "btn_post": "انتشار سفر",
+    "sections": {
+      "route": "مسیر",
+      "details": "جزئیات",
+      "capacity": "ظرفیت",
+      "allowed_items": "کالاهای مجاز"
+    },
+    "labels": {
+      "origin": "مبدا",
+      "destination": "مقصد",
+      "city_placeholder": "شهر، کشور",
+      "arrival_date": "تاریخ ورود",
+      "airline": "ایرلاین",
+      "select_airline": "انتخاب ایرلاین",
+      "search_airline_placeholder": "جستجو مثلا: ایران ایر"
+    },
+    "units": {
+      "kg": "کیلوگرم",
+      "gr": "گرم"
+    },
+    "info_warning": "مسئولیت بررسی قوانین ایرلاین برای اقلام خاص بر عهده شماست.",
+    "errors": {
+      "origin": "لطفا یک شهر مبدا معتبر از لیست انتخاب کنید.",
+      "destination": "لطفا یک شهر مقصد معتبر از لیست انتخاب کنید.",
+      "space": "فضای موجود الزامی است.",
+      "airline": "لطفا یک ایرلاین انتخاب کنید.",
+      "limit_title": "محدودیت پر شد",
+      "limit_msg": "حداکثر فضای موجود {{limit}} {{unit}} است.",
+      "generic_error": "خطا",
+      "submit_error": "امکان {{action}} سفر شما وجود نداشت. لطفا دوباره تلاش کنید.",
+      "no_airline_found": "هیچ ایرلاینی منطبق با \"{{query}}\" یافت نشد"
+    }
+  },
+  "create_request": {
+    "title_edit": "ویرایش درخواست",
+    "title_direct": "درخواست مستقیم",
+    "title_new": "درخواست جدید",
+    "btn_save": "ذخیره تغییرات",
+    "btn_send": "ارسال درخواست",
+    "btn_post": "انتشار درخواست",
+    "loading_trip": "در حال بارگذاری جزئیات سفر...",
+    "direct_label": "ارسال درخواست مستقیم به:",
+    "sections": {
+      "product": "محصول",
+      "route": "مسیر تحویل",
+      "deadline": "مهلت",
+      "budget": "بودجه و پاداش",
+      "specs": "مشخصات",
+      "category": "دسته‌بندی",
+      "notes": "یادداشت‌ها"
+    },
+    "labels": {
+      "upload_image": "آپلود تصویر محصول",
+      "product_name": "نام محصول",
+      "product_placeholder": "مثلا: آیفون ۱۵ پرو",
+      "product_link": "لینک محصول (اختیاری)",
+      "link_placeholder": "https://...",
+      "origin": "از",
+      "destination": "به",
+      "city_placeholder": "شهر، کشور",
+      "required_by": "مورد نیاز تا تاریخ",
+      "item_price": "قیمت کالا ($)",
+      "qty": "تعداد",
+      "reward": "پاداش مسافر ($)",
+      "reward_placeholder": "20.00",
+      "reward_helper": "این مبلغی است که بابت زحمت مسافر به او می‌پردازید.",
+      "weight": "وزن تقریبی (اختیاری)",
+      "weight_placeholder": "مثلا: ۲۰۰",
+      "notes_placeholder": "سایز، رنگ، دستورالعمل‌های حمل..."
+    },
+    "units": {
+      "kg": "کیلوگرم",
+      "gr": "گرم"
+    },
+    "errors": {
+      "product_name": "نام محصول الزامی است.",
+      "item_price": "قیمت کالا الزامی است.",
+      "reward": "کارمزد مسافر الزامی است.",
+      "origin": "لطفا شهر مبدا معتبری انتخاب کنید.",
+      "destination": "لطفا شهر مقصد معتبری انتخاب کنید.",
+      "generic_error": "خطا",
+      "submit_error": "امکان {{action}} درخواست شما وجود نداشت. لطفا دوباره تلاش کنید.",
+      "upload_failed": "آپلود ناموفق",
+      "invalid_file_type": "نوع فایل نامعتبر",
+      "invalid_file_msg": "فقط فایل‌های تصویری مجاز هستند. لطفا یک تصویر معتبر (JPEG، PNG و غیره) انتخاب کنید.",
+      "file_too_large": "فایل خیلی حجیم است",
+      "file_too_large_msg": "تصویر خیلی بزرگ است ({{size}} مگابایت). حداکثر اندازه فایل ۵ مگابایت است. لطفا تصویر کوچکتری انتخاب کنید."
+    }
+  },
+  "payment": {
+    "title": "تایید و پرداخت",
+    "loading_error": "خطا در بارگذاری جزئیات پرداخت.",
+    "delivery_partner": "همکار تحویل",
+    "verified_traveler": "مسافر تایید شده",
+    "payment_method": "روش پرداخت",
+    "order_summary": "خلاصه سفارش",
+    "delivery_fee": "هزینه تحویل",
+    "total": "مجموع",
+    "security_notice": "پرداخت شما تا زمانی که تحویل را تایید کنید، به صورت امن نگهداری می‌شود.",
+    "pay_btn": "پرداخت ${{amount}}",
+    "success_title": "پرداخت موفق!",
+    "success_msg": "سفارش شما تایید شد. لطفا پس از دریافت کالا، کد زیر را با مسافر خود به اشتراک بگذارید.",
+    "delivery_code": "کد تحویل شما",
+    "view_order_btn": "مشاهده جزئیات سفارش",
+    "alerts": {
+      "failed_title": "پرداخت ناموفق",
+      "failed_msg": "پرداخت انجام نشد. لطفا دوباره تلاش کنید."
+    }
+  },
+  "offer": {
+    "loading_error": "شناسایی کاربر فعلی امکان‌پذیر نیست.",
+    "loading_data_error": "بارگذاری داده‌های پیشنهاد امکان‌پذیر نیست.",
+    "btn_go_back": "بازگشت",
+    "status": {
+      "offer_sent": "پیشنهاد ارسال شد",
+      "waiting_traveler": "منتظر {{name}} برای پذیرش پیشنهاد شما جهت آوردن کالا.",
+      "waiting_requester": "منتظر {{name}} برای پذیرش مبلغ پیشنهادی شما.",
+      "action_required": "اقدام لازم است",
+      "action_traveler": "{{name}} پیشنهادی ارسال کرده است. برای ادامه به پرداخت آن را بپذیرید یا مذاکره کنید.",
+      "action_requester": "{{name}} درخواست خود را به‌روزرسانی کرد. مبلغ جدید را بررسی کنید.",
+      "offer_accepted": "پیشنهاد پذیرفته شد!",
+      "offer_accepted_desc": "عالی! حالا لطفا برای نهایی کردن توافق و باز شدن چت، به مرحله پرداخت بروید.",
+      "waiting_payment": "منتظر پرداخت",
+      "waiting_payment_desc": "پیشنهاد پذیرفته شد! منتظر {{name}} برای انجام پرداخت. پس از تایید به شما اطلاع داده خواهد شد.",
+      "payment_secured": "پرداخت امن انجام شد",
+      "payment_secured_requester": "اکنون می‌توانید با مسافر چت کنید. کد تحویل را تا زمانی که کالا را در دست نگرفته‌اید، به هیچ وجه به اشتراک نگذارید.",
+      "payment_secured_traveler": "وجه به صورت امن نگهداری می‌شود. جزئیات تحویل را در چت هماهنگ کنید. هنگام تحویل کد را درخواست کنید.",
+      "completed": "سفارش تکمیل شد",
+      "completed_desc": "تحویل با موفقیت انجام شد و وجوه آزاد گردید. از اینکه از PeykLink استفاده کردید متشکریم!",
+      "closed": "پیشنهاد بسته شد",
+      "closed_desc": "{{name}} این پیشنهاد را {{status}}."
+    },
+    "summary_title": "خلاصه درخواست",
+    "view_product": "مشاهده محصول",
+    "qty": "تعداد: {{count}}",
+    "wt": "وزن: {{weight}}",
+    "price": "قیمت محصول",
+    "fee": "کارمزد مسافر",
+    "btn_proceed": "ادامه جهت پرداخت",
+    "btn_confirm": "تایید تحویل",
+    "actions": {
+      "cancel": "لغو",
+      "reject": "رد کردن",
+      "negotiate": "مذاکره",
+      "accept": "پذیرفتن"
+    },
+    "modals": {
+      "negotiate_title": "پیشنهاد مبلغ جدید",
+      "btn_send_offer": "ارسال پیشنهاد جدید"
+    },
+    "alerts": {
+      "invalid_amount": "مبلغ نامعتبر",
+      "enter_valid_fee": "لطفا مبلغ معتبری وارد کنید.",
+      "error_title": "خطا",
+      "send_offer_error": "ارسال پیشنهاد انجام نشد. لطفا دوباره تلاش کنید.",
+      "accept_error": "پذیرش پیشنهاد انجام نشد.",
+      "reject_title": "پیشنهاد رد شد",
+      "reject_msg": "شما این پیشنهاد را رد کردید.",
+      "reject_error": "رد کردن پیشنهاد انجام نشد.",
+      "cancel_title": "درخواست لغو شد",
+      "cancel_msg": "شما این درخواست را لغو کردید.",
+      "cancel_error": "لغو درخواست انجام نشد.",
+      "url_error": "باز کردن این آدرس امکان‌پذیر نیست: {{url}}"
+    },
+    "delivery_code": {
+      "title": "کد تحویل شما",
+      "warning": "مهم: این کد را فقط بعد از اینکه کالا را دریافت و بررسی کردید با مسافر به اشتراک بگذارید."
+    },
+    "history": {
+      "chat": "تاریخچه چت",
+      "negotiation": "تاریخچه مذاکره",
+      "now": "اکنون",
+      "ago_m": "{{count}} دقیقه پیش",
+      "ago_h": "{{count}} ساعت پیش"
+    },
+    "trip_details": {
+      "title": "جزئیات سفر",
+      "origin": "مبدا",
+      "destination": "مقصد",
+      "traveler_label": "مسافر"
+    }
+  },
+  "confirm_delivery": {
+    "title": "تایید تحویل",
+    "delivering_item": "کالای در حال تحویل",
+    "verification_title": "نیاز به تایید",
+    "verification_desc": "لطفا کد تایید ۶ رقمی ارائه شده توسط درخواست‌دهنده را وارد کنید.",
+    "attempts_remaining": "{{count}} تلاش باقی‌مانده",
+    "secure_notice": "پس از تایید کد، وجوه به صورت امن از حساب امانی آزاد می‌شوند.",
+    "alerts": {
+      "invalid_code_title": "کد نامعتبر",
+      "invalid_code_msg": "لطفا تمام ۶ رقم را وارد کنید.",
+      "incorrect_code_title": "کد نادرست",
+      "success_title": "موفقیت‌آمیز! 🎉",
+      "success_msg": "تحویل تایید شد. وجوه به حساب شما آزاد شد.",
+      "btn_awesome": "عالی!",
+      "error_title": "خطای سیستم",
+      "error_msg": "مشکلی پیش آمد. لطفا دوباره تلاش کنید."
+    }
+  },
+  "trip_component": {
+    "delete_error": "خطا در حذف سفر",
+    "offer_error": "خطا در ارسال پیشنهاد",
+    "modals": {
+      "delete": {
+        "title": "تایید حذف",
+        "text": "آیا مطمئن هستید که می‌خواهید این سفر را حذف کنید؟ این عمل غیرقابل بازگشت است.",
+        "cancel": "لغو",
+        "confirm": "تایید"
+      },
+      "edit": {
+        "title": "تایید ویرایش",
+        "text": "آیا مطمئن هستید که می‌خواهید این سفر را ویرایش کنید؟ شما به صفحه ویرایش هدایت خواهید شد.",
+        "cancel": "لغو",
+        "confirm": "تایید"
+      }
+    },
+    "labels": {
+      "new": "جدید",
+      "origin": "مبدا",
+      "destination": "مقصد",
+      "traveler": "مسافر",
+      "request_delivery": "درخواست تحویل"
+    }
+  },
+  "request_component": {
+    "delete_error": "خطا در حذف درخواست",
+    "no_matching_trip": "سفر منطبق یافت نشد",
+    "trip_needed_msg": "برای ارائه پیشنهاد به سفری از {{origin}} به {{dest}} نیاز دارید.",
+    "invalid_fee": "مبلغ نامعتبر",
+    "valid_amount_msg": "لطفا مبلغ معتبری وارد کنید.",
+    "offer_sent": "پیشنهاد با موفقیت ارسال شد.",
+    "duplicate_offer_title": "شما قبلاً پیشنهادی دارید",
+    "duplicate_offer_msg": "می‌توانید پیشنهاد موجود خود را در صندوق پیام مشاهده کنید.",
+    "url_error": "باز کردن این آدرس امکان‌پذیر نیست",
+    "labels": {
+      "new": "جدید",
+      "requesting_item": "درخواست کالا",
+      "view_product": "مشاهده محصول",
+      "qty": "تعداد: {{count}}",
+      "wt": "وزن: {{weight}}",
+      "reward": "پاداش",
+      "due": "مهلت",
+      "cost": "هزینه",
+      "show_less": "نمایش کمتر",
+      "show_more": "نمایش بیشتر",
+      "checking_trips": "بررسی سفرهای منطبق...",
+      "make_offer": "ارائه پیشنهاد تحویل",
+      "propose_fee": "پیشنهاد مبلغ",
+      "send_offer": "ارسال پیشنهاد"
+    },
+    "modals": {
+      "delete": {
+        "title": "تایید حذف",
+        "text": "آیا مطمئن هستید که می‌خواهید این درخواست را حذف کنید؟ این عمل غیرقابل بازگشت است.",
+        "cancel": "لغو",
+        "confirm": "تایید"
+      },
+      "edit": {
+        "title": "تایید ویرایش",
+        "text": "آیا مطمئن هستید که می‌خواهید این درخواست را ویرایش کنید؟",
+        "cancel": "لغو",
+        "confirm": "تایید"
+      }
+    }
+  }
+}

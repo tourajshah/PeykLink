@@ -2,64 +2,109 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from 'convex/react';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    KeyboardAvoidingView, // <-- Keep this one
+    KeyboardAvoidingView,
     Platform,
-    ScrollView, // <-- Added ScrollView
+    RefreshControl,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
-// --- FIX: Import SafeAreaView from the correct library ---
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 
+// === TRANSLATION IMPORT ===
+import { useTranslation } from 'react-i18next';
+
+// Consistent Modern Palette
+const PALETTE = {
+    background: '#F7F8FA',
+    surface: '#FFFFFF',
+    primary: '#3B82F6',
+    secondary: '#10B981',
+    textPrimary: '#1F2937',
+    textSecondary: '#6B7280',
+    border: '#E5E7EB',
+    success: '#10B981',
+    error: '#EF4444',
+    warning: '#F59E0B',
+    shadow: 'rgba(0, 0, 0, 0.08)',
+};
+
 export default function ConfirmDeliveryScreen() {
     const router = useRouter();
+    // Initialize Translation
+    const { t } = useTranslation();
+
     const params = useLocalSearchParams();
     const negotiationId = params.negotiationId as Id<"negotiations">;
     
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    
+    const [localAttempts, setLocalAttempts] = useState(0);
+
     const inputRefs = useRef<(TextInput | null)[]>([]);
+    // Reference for ScrollView to programmatically scroll if needed
+    const scrollViewRef = useRef<ScrollView>(null);
     
     const confirmDelivery = useMutation(api.orders.confirmDelivery);
     
     const orderData = useQuery(api.orders.getOrderByNegotiation, { negotiationId });
     const offerDetails = useQuery(api.offers.getOfferThreadDetails, { negotiationId });
 
+    useEffect(() => {
+        if (orderData?.codeAttempts) {
+            setLocalAttempts(orderData.codeAttempts);
+        }
+    }, [orderData?.codeAttempts]);
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setTimeout(() => {
+            setRefreshing(false);
+        }, 1200);
+    }, []);
+
     if (!orderData || !offerDetails) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+                <ActivityIndicator size="large" color={PALETTE.primary} />
             </View>
         );
     }
+
+    const MAX_ATTEMPTS = 5;
+    const attemptsUsed = localAttempts;
+    const attemptsRemaining = Math.max(0, MAX_ATTEMPTS - attemptsUsed);
     
     const handleCodeChange = (value: string, index: number) => {
-        // Only allow numeric input
-        if (value && !/^[0-9]$/.test(value)) {
-            return;
-        }
+        if (value && !/^[0-9]$/.test(value)) return;
         
         const newCode = [...code];
         newCode[index] = value;
         setCode(newCode);
         
-        // Auto-focus next input
+        if (value) {
+            Haptics.selectionAsync();
+        }
+        
         if (value && index < 5) {
             inputRefs.current[index + 1]?.focus();
         }
         
-        // Auto-submit when complete
         const isComplete = newCode.every(digit => digit !== '');
         if (isComplete) {
             inputRefs.current[index]?.blur();
@@ -72,13 +117,19 @@ export default function ConfirmDeliveryScreen() {
             inputRefs.current[index - 1]?.focus();
         }
     };
+
+    // Helper to scroll to the input section when focused
+    const scrollToInput = () => {
+        // Scroll down slightly to ensure the input isn't hidden behind the keyboard toolbar
+        scrollViewRef.current?.scrollTo({ y: 150, animated: true });
+    };
     
     const handleSubmit = async (fullCode?: string) => {
         const codeString = fullCode || code.join('');
         
         if (codeString.length !== 6) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("Invalid Code", "Please enter all 6 digits.");
+            Alert.alert(t('confirm_delivery.alerts.invalid_code_title'), t('confirm_delivery.alerts.invalid_code_msg'));
             return;
         }
         
@@ -86,82 +137,102 @@ export default function ConfirmDeliveryScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         
         try {
-            await confirmDelivery({
+            const result = await confirmDelivery({
                 orderId: orderData._id,
                 enteredCode: codeString,
             });
+
+            if (!result.success) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                
+                if (result.attempts) {
+                    setLocalAttempts(result.attempts);
+                }
+
+                setCode(['', '', '', '', '', '']);
+                inputRefs.current[0]?.focus();
+
+                Alert.alert(t('confirm_delivery.alerts.incorrect_code_title'), result.message);
+                return; 
+            }
             
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert(
-                "Success! 🎉",
-                "Delivery confirmed. Funds have been released to your account.",
+                t('confirm_delivery.alerts.success_title'),
+                t('confirm_delivery.alerts.success_msg'),
                 [
                     { 
-                        text: "Awesome!", 
+                        text: t('confirm_delivery.alerts.btn_awesome'), 
                         onPress: () => router.replace('/(tabs)/inbox')
                     }
                 ]
             );
+
         } catch (error: any) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            
-            // Clear code on error
-            setCode(['', '', '', '', '', '']);
-            inputRefs.current[0]?.focus();
-            
-            Alert.alert(
-                "Incorrect Code",
-                error.message || "Please check the code and try again.",
-                [{ text: "Try Again" }]
-            );
+            console.error(error);
+            Alert.alert(t('confirm_delivery.alerts.error_title'), t('confirm_delivery.alerts.error_msg'));
         } finally {
             setIsSubmitting(false);
         }
     };
     
     return (
-        // --- FIX: Using SafeAreaView from react-native-safe-area-context ---
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-            {/* --- FIX: More robust KeyboardAvoidingView setup --- */}
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity 
+                    onPress={() => router.back()}
+                    style={styles.backButton}
+                    disabled={isSubmitting}
+                >
+                    <Ionicons name="close" size={24} color={PALETTE.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{t('confirm_delivery.title')}</Text>
+                <View style={{ width: 40 }} />
+            </View>
+
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoidingContainer}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+                // MODIFIED: Increased offset to account for Header (approx 60) + Status Bar (approx 40)
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 110 : 20}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity 
-                        onPress={() => router.back()}
-                        style={styles.backButton}
-                        disabled={isSubmitting}
-                    >
-                        <Ionicons name="close" size={26} color={COLORS.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Confirm Delivery</Text>
-                    <View style={{ width: 40 }} />
-                </View>
-                
-                {/* ScrollView makes the content scrollable when keyboard is up */}
                 <ScrollView 
+                    ref={scrollViewRef}
                     contentContainerStyle={styles.scrollContentContainer}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PALETTE.primary} />
+                    }
                 >
                     {/* Order Information Card */}
-                    <View style={styles.orderInfoCard}>
-                        <Ionicons name="wallet-outline" size={38} color={COLORS.primary} style={styles.orderInfoIcon} /> 
-                        <View style={styles.orderInfoTextContainer}>
-                            <Text style={styles.orderInfoLabel}>Receiving funds for:</Text>
-                            <Text style={styles.orderInfoProduct}>{offerDetails.request?.productName}</Text>
+                    <LinearGradient
+                        colors={['#FFFFFF', '#EFF6FF']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.orderInfoCard}
+                    >
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="cube" size={24} color={PALETTE.primary} />
                         </View>
-                    </View>
+                        <View style={styles.orderInfoTextContainer}>
+                            <Text style={styles.orderInfoLabel}>{t('confirm_delivery.delivering_item')}</Text>
+                            <Text style={styles.orderInfoProduct} numberOfLines={1}>
+                                {offerDetails.request?.productName}
+                            </Text>
+                        </View>
+                    </LinearGradient>
                     
-                    {/* Main Interaction Card */}
+                    {/* Main Code Input Card */}
                     <View style={styles.card}>
-                        <Ionicons name="key-outline" size={60} color={COLORS.textSecondary} style={{ marginBottom: 16 }} />
-                        <Text style={styles.title}>Enter Delivery Code</Text>
+                        <View style={styles.iconCircle}>
+                            <Ionicons name="shield-checkmark" size={32} color={PALETTE.primary} />
+                        </View>
+                        
+                        <Text style={styles.title}>{t('confirm_delivery.verification_title')}</Text>
                         <Text style={styles.subtitle}>
-                            Please ask the requester for the 6-digit code. This confirms delivery and releases your payment!
+                            {t('confirm_delivery.verification_desc')}
                         </Text>
                         
                         <View style={[styles.codeInputContainer, isSubmitting && styles.disabled]}>
@@ -173,27 +244,46 @@ export default function ConfirmDeliveryScreen() {
                                         styles.codeInput,
                                         code[index] ? styles.codeInputFilled : null,
                                         inputRefs.current[index]?.isFocused() && !isSubmitting ? styles.codeInputFocused : null,
+                                        attemptsRemaining <= 2 && styles.codeInputWarning
                                     ]}
                                     value={digit}
                                     onChangeText={(value) => handleCodeChange(value, index)}
                                     onKeyPress={(e) => handleKeyPress(e, index)}
+                                    // ADDED: onFocus listener to ensure visibility
+                                    onFocus={() => scrollToInput()}
                                     keyboardType="number-pad"
                                     maxLength={1}
                                     autoFocus={index === 0}
                                     editable={!isSubmitting}
                                     textContentType="oneTimeCode"
+                                    selectionColor={PALETTE.primary}
+                                    placeholder="-"
+                                    placeholderTextColor="#D1D5DB"
                                 />
                             ))}
                         </View>
 
-                        {isSubmitting && <ActivityIndicator style={{ marginTop: 24 }} size="large" color={COLORS.primary} />}
+                        {/* Attempts Counter */}
+                        <View style={styles.attemptsContainer}>
+                            {attemptsRemaining <= 2 && (
+                                <Ionicons name="warning" size={16} color={PALETTE.error} style={{ marginRight: 6 }} />
+                            )}
+                            <Text style={[
+                                styles.attemptsText, 
+                                attemptsRemaining <= 2 ? { color: PALETTE.error } : { color: PALETTE.textSecondary }
+                            ]}>
+                                {t('confirm_delivery.attempts_remaining', { count: attemptsRemaining })}
+                            </Text>
+                        </View>
+
+                        {isSubmitting && <ActivityIndicator style={{ marginTop: 24 }} size="large" color={PALETTE.primary} />}
                     </View>
                     
-                    {/* Reassured Info Box */}
+                    {/* Info Footer */}
                     <View style={styles.infoBox}>
-                        <Ionicons name="sparkles-outline" size={20} color={COLORS.green} />
+                        <Ionicons name="lock-closed" size={18} color={PALETTE.success} />
                         <Text style={styles.infoText}>
-                            Your payment will be processed immediately after successful confirmation!
+                            {t('confirm_delivery.secure_notice')}
                         </Text>
                     </View>
                 </ScrollView>
@@ -202,25 +292,10 @@ export default function ConfirmDeliveryScreen() {
     );
 }
 
-// Styles are largely the same, with one key change for the scroll container
-const COLORS = {
-    primary: '#007AFF',
-    secondary: '#FFD700',
-    background: '#F2F2F7',
-    card: '#FFFFFF',
-    textPrimary: '#000000',
-    textSecondary: '#8A8A8E',
-    separator: '#E5E5EA',
-    green: '#34C759',
-    red: '#FF3B30',
-    disabled: '#C7C7CC',
-    shadow: 'rgba(0,0,0,0.08)'
-};
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: PALETTE.background,
     },
     keyboardAvoidingContainer: {
         flex: 1,
@@ -229,7 +304,7 @@ const styles = StyleSheet.create({
         flex: 1, 
         justifyContent: 'center', 
         alignItems: 'center', 
-        backgroundColor: COLORS.background 
+        backgroundColor: PALETTE.background 
     },
     header: {
         flexDirection: 'row',
@@ -237,86 +312,114 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: COLORS.background,
+        backgroundColor: PALETTE.background,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     backButton: {
-        height: 40,
         width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF',
         justifyContent: 'center',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        shadowColor: PALETTE.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     headerTitle: {
-        color: COLORS.textPrimary,
-        fontSize: 20,
+        color: PALETTE.textPrimary,
+        fontSize: 17,
         fontWeight: '700',
     },
-    // --- FIX: Style for ScrollView content ---
     scrollContentContainer: {
-        flexGrow: 1, // Allows content to grow and center itself
-        justifyContent: 'center', // Centers content vertically
+        flexGrow: 1,
+        justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
-        paddingBottom: 40, // Extra space at the bottom
+        // MODIFIED: Increased bottom padding to allow scrolling up when keyboard is open
+        paddingBottom: 100, 
     },
     orderInfoCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.card,
         borderRadius: 16,
-        padding: 18,
-        marginBottom: 30,
+        padding: 16,
+        marginBottom: 24,
         width: '100%',
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 15,
-        elevation: 8,
-        borderLeftWidth: 6,
-        borderColor: COLORS.green,
+        borderWidth: 1,
+        borderColor: PALETTE.border,
+        shadowColor: PALETTE.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 3,
     },
-    orderInfoIcon: {
-        marginRight: 15,
+    iconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#DBEAFE', // Light blue
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
     },
     orderInfoTextContainer: {
         flex: 1,
     },
     orderInfoLabel: {
-        fontSize: 15,
-        color: COLORS.textSecondary,
+        fontSize: 12,
+        color: PALETTE.textSecondary,
         marginBottom: 2,
+        textTransform: 'uppercase',
+        fontWeight: '600',
+        letterSpacing: 0.5,
     },
     orderInfoProduct: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '700',
-        color: COLORS.textPrimary,
+        color: PALETTE.textPrimary,
     },
     card: {
-        backgroundColor: COLORS.card,
+        backgroundColor: PALETTE.surface,
         borderRadius: 24,
-        padding: 28,
+        padding: 24,
         width: '100%',
         alignItems: 'center',
-        shadowColor: COLORS.shadow,
+        shadowColor: PALETTE.shadow,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 10,
+        shadowRadius: 24,
+        elevation: 8,
         marginBottom: 24,
+        borderWidth: 1,
+        borderColor: PALETTE.border,
+    },
+    iconCircle: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
     },
     title: {
-        color: COLORS.textPrimary,
-        fontSize: 26,
-        fontWeight: 'bold',
-        marginBottom: 10,
+        color: PALETTE.textPrimary,
+        fontSize: 22,
+        fontWeight: '800',
+        marginBottom: 8,
         textAlign: 'center',
     },
     subtitle: {
-        color: COLORS.textSecondary,
-        fontSize: 17,
+        color: PALETTE.textSecondary,
+        fontSize: 15,
         textAlign: 'center',
-        marginBottom: 36,
-        lineHeight: 24,
-        paddingHorizontal: 10,
+        marginBottom: 32,
+        lineHeight: 22,
+        paddingHorizontal: 8,
     },
     codeInputContainer: {
         flexDirection: 'row',
@@ -327,53 +430,69 @@ const styles = StyleSheet.create({
     },
     codeInput: {
         flex: 1,
-        height: 60,
-        backgroundColor: COLORS.background,
-        borderRadius: 14,
-        borderWidth: 2,
-        borderColor: COLORS.separator,
-        color: COLORS.textPrimary,
-        fontSize: 30,
+        height: 56,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: PALETTE.border,
+        color: PALETTE.textPrimary,
+        fontSize: 24,
         fontWeight: 'bold',
         textAlign: 'center',
-        shadowColor: COLORS.shadow,
+        shadowColor: PALETTE.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
+        shadowRadius: 2,
     },
     codeInputFilled: {
-        borderColor: COLORS.primary,
-        color: COLORS.primary,
-        backgroundColor: `${COLORS.primary}05`,
+        borderColor: PALETTE.primary,
+        backgroundColor: '#EFF6FF',
+        color: PALETTE.primary,
     },
     codeInputFocused: {
-        borderColor: COLORS.primary,
+        borderColor: PALETTE.primary,
+        borderWidth: 2,
+        backgroundColor: '#FFFFFF',
         transform: [{ scale: 1.05 }],
-        backgroundColor: COLORS.card,
+        shadowColor: PALETTE.primary,
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+    },
+    codeInputWarning: {
+        borderColor: PALETTE.error,
+        color: PALETTE.error,
+        backgroundColor: '#FEF2F2',
+    },
+    attemptsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    attemptsText: {
+        fontSize: 13,
+        fontWeight: '600',
     },
     disabled: {
-        opacity: 0.4,
+        opacity: 0.5,
     },
     infoBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 14,
         width: '100%',
         justifyContent: 'center',
-        backgroundColor: `${COLORS.green}1A`,
+        backgroundColor: '#ECFDF5', // Light green
         borderRadius: 12,
-        paddingHorizontal: 20,
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
     },
     infoText: {
-        color: COLORS.green,
-        fontSize: 15,
-        marginLeft: 10,
-        textAlign: 'center',
+        color: '#047857', // Deep green
+        fontSize: 13,
+        marginLeft: 8,
+        textAlign: 'left',
         flex: 1,
-        fontWeight: '500',
+        fontWeight: '600',
+        lineHeight: 18,
     },
 });

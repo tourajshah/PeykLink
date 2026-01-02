@@ -1,44 +1,75 @@
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
+import { Id } from './_generated/dataModel';
 import { internalAction, internalMutation, internalQuery, mutation, query } from './_generated/server';
 import { getAuthenticatedUser } from "./users";
 
 
 
 export const getNotReviewedNegotiations = query({
-    handler: async (ctx) => {
-        const currentUser = await getAuthenticatedUser(ctx)
+  handler: async (ctx) => {
+    const currentUser = await getAuthenticatedUser(ctx);
 
-        const allCompeletedNegotiations = await ctx.db
-        .query("negotiations")
-        .filter((q) =>
-            q.and(
-                q.eq(q.field("status"), "completed"),
-                q.or(
-                    q.eq(q.field("requesterId"), currentUser._id),
-                    q.eq(q.field("travelerId"), currentUser._id )
-                )
-
-            )
+    // 1. Get ALL completed negotiations involving this user
+    const allCompletedNegotiations = await ctx.db
+      .query("negotiations")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "completed"),
+          q.or(
+            q.eq(q.field("requesterId"), currentUser._id),
+            q.eq(q.field("travelerId"), currentUser._id)
+          )
         )
-        .collect()
+      )
+      .collect();
 
-        const userReviews = await ctx.db
-        .query("reviews")
-        .filter((q) => 
-            q.eq(q.field("reviewerId"), currentUser._id))
-        .collect()
+    // 2. Get all reviews WRITTEN by this user
+    const userReviews = await ctx.db
+      .query("reviews")
+      // SUGGESTION: Add index .withIndex("by_reviewerId") to schema for speed
+      .filter((q) => q.eq(q.field("reviewerId"), currentUser._id))
+      .collect();
+
+    // 3. Create Set of IDs for fast lookup
+    const reviewedNegotiationIds = new Set(userReviews.map((r) => r.negotiationId));
+
+    // 4. Filter: Keep only unreviewed negotiations
+    const unreviewedList = allCompletedNegotiations.filter(
+      (n) => !reviewedNegotiationIds.has(n._id)
+    );
+
+    // 5. MERGE DATA: Fetch User and Product details for the UI
+    // We use Promise.all to fetch related docs in parallel
+    const enrichedNegotiations = await Promise.all(
+      unreviewedList.map(async (negotiation) => {
+        // A. Get Product details
+        const requestDoc = await ctx.db.get(negotiation.requestId);
         
-        const reviewedNegotiationsIds = new Set(userReviews.map(review => review.negotiationId))
+        // B. Determine "The Other Person" (If I am requester, show traveler, etc.)
+        const isMeRequester = negotiation.requesterId === currentUser._id;
+        const otherUserId = isMeRequester ? negotiation.travelerId : negotiation.requesterId;
+        const otherUserDoc = await ctx.db.get(otherUserId);
 
-        const notReviewedNegotiations = allCompeletedNegotiations.filter(
-            (negotiation) => !reviewedNegotiationsIds.has(negotiation._id)
-        )
+        // C. (Optional) Resolve Image URL if 'imageKey' is a storage ID
+        // const productUrl = requestDoc?.imageKey ? await ctx.storage.getUrl(requestDoc.imageKey) : null;
 
-        return notReviewedNegotiations
+        return {
+            ...negotiation, // Keeps original ID, fee, etc.
+            
+            // New merged fields for UI:
+            productName: requestDoc?.productName || "Unknown Item",
+            productImageUrl: requestDoc?.imageKey, // Or 'productUrl' if using storage
+            
+            travelerName: otherUserDoc?.fullname || "User",
+            userAvatarUrl: otherUserDoc?.imageURL,
+        };
+      })
+    );
 
-    }
-}) 
+    return enrichedNegotiations;
+  },
+});
 
 export const getUserReviews = query({
   args: {
@@ -105,13 +136,12 @@ export const getDetailsForReview = query({
 export const createReview = mutation({
   args: {
     negotiationId: v.id('negotiations'),
-    overallRating: v.number(),
+    rating: v.number(),
     comment: v.optional(v.string()),
-    status: v.string(),
-    createdAt: v.float64(),
-    communicationRating: v.number(),
-    punctualityRating: v.number(),
-    itemConditionRating: v.number(),
+    status: v.literal("hidden"),
+    communicationRating: v.optional(v.number()),
+    punctualityRating: v.optional(v.number()),
+    itemConditionRating: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const currentUser = await getAuthenticatedUser(ctx);
@@ -125,7 +155,20 @@ export const createReview = mutation({
     }
     
     // Determine who is being reviewed
-    const revieweeId = currentUser._id === negotiation.requesterId ? negotiation.travelerId : negotiation.requesterId;
+    // const revieweeId = currentUser._id === negotiation.requesterId ? negotiation.travelerId : negotiation.requesterId;
+
+    let revieweeId: Id<"users">;
+    let revieweeRole: "traveler" | "requester";
+
+    if (currentUser._id === negotiation.requesterId) {
+      // current user is requester ---> is reviewing the traveler
+      revieweeId = negotiation.travelerId
+      revieweeRole = "traveler"
+    } else {
+      // current user is traveler ---> is reviewing the requester 
+      revieweeId = negotiation.requesterId
+      revieweeRole = "requester"
+    }
 
     // Prevent duplicate reviews
     const existingReview = await ctx.db
@@ -143,24 +186,82 @@ export const createReview = mutation({
       negotiationId: args.negotiationId,
       reviewerId: currentUser._id,
       revieweeId: revieweeId,
-      rating: args.overallRating,
+      revieweeRole: revieweeRole,
+      rating: args.rating,
       comment: args.comment,
       status: "hidden",
-      createdAt: args.createdAt
+      createdAt: Date.now(),
+      communicationRating: args.communicationRating,
+      punctualityRating: args.punctualityRating,
+      itemConditionRating: args.itemConditionRating,
     });
 
-    // 2. Recalculate and update the average rating for the user who was reviewed
+    const calculateStats = (reviews: any[]) => {
+      if (reviews.length === 0) return {
+        rating: 0,
+        communicationRating: undefined,
+        punctualityRating: undefined,
+        itemConditionRating: undefined,
+      };
+
+      const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+      
+      // Calculate Average for a specific set of reviews
+
+      const getAvg = (field: string) => {
+        const valid = reviews.filter((r) => (r[field] || 0) > 0)
+        if (valid.length === 0) return undefined;
+        const sum = valid.reduce((acc, r) => acc + (r[field] || 0), 0)
+        return parseFloat((sum / valid.length).toFixed(2));
+      };
+
+      return {
+        rating: parseFloat((totalRating / reviews.length).toFixed(2)),
+        communicationRating: getAvg("communicationRating"),
+        punctualityRating: getAvg("punctualityRating"),
+        itemConditionRating: getAvg("itemConditionRating"),
+      }
+    }
+
+    // Fetch All Reviews for this User to update "Global" stats
+    
     const allReviewsForUser = await ctx.db
       .query('reviews')
       .withIndex('by_revieweeId', (q) => q.eq('revieweeId', revieweeId))
       .collect();
 
-    const totalRating = allReviewsForUser.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = totalRating / allReviewsForUser.length;
+    // const totalRating = allReviewsForUser.reduce((sum, review) => sum + review.rating, 0);
+    // const averageRating = totalRating / allReviewsForUser.length;
 
-    await ctx.db.patch(revieweeId, {
-      rating: parseFloat(averageRating.toFixed(2)),
-    });
+    // Fetch Role-Specific Reviews (Traveler OR Requester)
+    // We filter the 'allReviews' array in memory to save DB calls, 
+    // since we already fetched everything for the global stat.
+
+    const roleReviews = allReviewsForUser.filter(r => r.revieweeRole === revieweeRole)
+
+    // Calculate Stats
+
+    const globalStats = calculateStats(allReviewsForUser);
+    const roleStats = calculateStats(roleReviews);
+
+    // Construct the Patch Object
+
+    const patchData : any = {
+      rating: globalStats.rating,
+      communicationRating: globalStats.communicationRating,
+      punctualityRating: globalStats.punctualityRating,
+      itemConditionRating: globalStats.itemConditionRating
+    }
+
+    // Update the specific role rating field
+
+    if (revieweeRole === "traveler") {
+      patchData.asTravelerRating = roleStats.rating;
+    } else {
+      patchData.asRequesterRating = roleStats.rating;
+    }
+
+    await ctx.db.patch(revieweeId, patchData);
 
     return { success: true };
   },

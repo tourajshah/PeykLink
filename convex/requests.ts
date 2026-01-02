@@ -104,9 +104,10 @@ export const getFeedRequests = query ({
                     destinationCountryCode: destinationCityInfo?.countryCode ?? '', // fallback
 
                     requester:{
-                        _id:requestCreator?._id as string,
-                        username: requestCreator?.username,
-                        image: requestCreator?.imageURL
+                        _id:requestCreator._id as string,
+                        username: requestCreator.username,
+                        image: requestCreator?.imageURL,
+                        asRequesterRating: requestCreator?.asRequesterRating
                     },
 
                 }
@@ -143,22 +144,34 @@ export const deleteRequest = mutation({
 
 
 export const getMyRequests = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    statuses: v.optional(v.array(v.string()))
+  },
+  handler: async (ctx, args) => {
     const currentUser = await getAuthenticatedUser(ctx);
 
     if (!currentUser) {
       return [];
     }
 
-    const userRequests = await ctx.db
+    let requestsQuery = ctx.db
       .query("requests")
       // Use the internal user _id to filter, which is the correct reference
-      .filter((q) => q.eq(q.field("requesterId"), currentUser._id))
-      .order("desc")
-      .collect();
+      .withIndex("by_requesterId", (q) => q.eq("requesterId", currentUser._id))
 
-    // Now, shape the data exactly like you do in getFeedRequests
+    if (args.statuses && args.statuses.length > 0) {
+
+      const statusToFilter = args.statuses;
+      
+      requestsQuery = requestsQuery.filter((q) => 
+        q.or(
+          ...statusToFilter.map(status => q.eq(q.field("status"), status))
+        )
+      );
+    }
+
+    const userRequests = await requestsQuery.order('desc').collect();
+
     const myRequestsWithInfo = userRequests.map((request) => {
       const originCityInfo = cityData.find(c => c.name === request.originCity && c.country === request.originCountry);
       const destinationCityInfo = cityData.find(c => c.name === request.destinationCity && c.country === request.destinationCountry);
@@ -167,7 +180,6 @@ export const getMyRequests = query({
         ...request,
         originCountryCode: originCityInfo?.countryCode ?? '',
         destinationCountryCode: destinationCityInfo?.countryCode ?? '',
-        // We already have the user's data, so we can attach it directly
         requester: {
           _id: currentUser._id,
           username: currentUser.username,
@@ -296,6 +308,101 @@ export const createDirectRequestAndOffer = mutation({
         return requestId;
     },
 });
+
+
+export const getRecommendedRequests = query({
+    args: {},
+    handler: async (ctx) => {
+        const currentUser = await getAuthenticatedUser(ctx);
+        if (!currentUser) {
+            return []
+        }
+
+        const userTrips = await ctx.db 
+          .query("trips")
+          .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
+          .filter((q) =>
+          q.eq(q.field("status"), "pending")
+          )
+          .order('desc')
+          .collect();
+
+        const userTripsRoute = userTrips.flatMap((trip) => {
+
+          const origin = cityData.find(c => c.name === trip.originCity && c.country === trip.originCountry)
+          const destination = cityData.find(c => c.name === trip.destinationCity && c.country === trip.destinationCountry)
+          if (!origin || !destination) {
+            return []
+          }
+          const originCity = origin.name
+          const originCountry = origin.country
+          const originCountryCode = origin.countryCode
+          const destinationCity = destination.name
+          const destinationCountry = destination.country
+          const destinationCountryCode = destination.countryCode
+
+          return {
+            origin,destination,
+            originCity,originCountry,originCountryCode,
+            destinationCity,destinationCountry,destinationCountryCode
+            
+          }
+        })
+
+        const userOriginCities = userTripsRoute.map((trip) => trip.originCity)
+        const userDestinationCities = userTripsRoute.map((trip) => trip. destinationCity)
+
+        const allRequests = await ctx.db.query("requests")
+          .filter((q) => 
+          q.and(
+            q.neq(q.field("requesterId"), currentUser._id),
+            q.eq(q.field("visibility"), "public"),
+            q.eq(q.field("status"), "pending")
+            ))
+          .collect()
+
+        const matchingRequests = allRequests.filter((request) =>
+          userOriginCities.includes(request.originCity) &&
+          userDestinationCities.includes(request.destinationCity)
+        )
+
+        if(matchingRequests.length === 0) return []
+
+        const matchingRequestsWithInfo = await Promise.all(
+            
+          matchingRequests.map(async(request) => {
+
+              const requestCreator = (await ctx.db.get(request.requesterId))
+
+              if (!requestCreator) {
+                return null
+              }
+
+              const originCityInfo = cityData.find(c => c.name === request.originCity && c.country === request.originCountry && c.countryCode);
+              const destinationCityInfo = cityData.find(c => c.name === request.destinationCity && c.country === request.destinationCountry);
+
+              return {
+                  ...request,
+
+                  originCountryCode: originCityInfo?.countryCode ?? '', // fallback
+                  destinationCountryCode: destinationCityInfo?.countryCode ?? '', // fallback
+
+                  requester:{
+                      _id:requestCreator?._id as string,
+                      username: requestCreator?.username,
+                      image: requestCreator?.imageURL
+                  },
+
+              }
+
+          })
+
+        )
+
+        return matchingRequestsWithInfo.filter((request): request is NonNullable<typeof request> => request !== null)     
+    }
+
+})
 
 
 export const cleanupDeletedRequests = internalAction({

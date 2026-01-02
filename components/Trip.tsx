@@ -4,44 +4,43 @@ import { useUser } from '@clerk/clerk-expo';
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useMutation, useQuery } from 'convex/react';
+import * as Haptics from 'expo-haptics'; // NEW: Imported Haptics
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import LottieView from 'lottie-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react'; // Removed unused useEffect
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CountryFlag from "react-native-country-flag";
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-// NEW: Modern, light-mode color palette
+// === TRANSLATION IMPORT ===
+import { useTranslation } from 'react-i18next';
+
+// 1. REFINED PALETTE: Matches Index & Create Screens exactly
 const PALETTE = {
-    backgroundGradient: ['#F7F8FA', '#FFFFFF'] as const, // Subtle gradient for a non-flat look
     surface: '#FFFFFF',
-    shadow: 'rgba(100, 100, 111, 0.25)', // Increased shadow opacity for more depth
-    primary: '#3B82F6', // A single, consistent primary blue
-    secondary: '#10B981', // A single, consistent secondary green
-    textPrimary: '#1F2937', // Near-black for high contrast
-    textSecondary: '#6B7280', // Medium gray for secondary info
-    historyIcon: '#ed7c04ff',
-    primaryGradient: ['#38BDF8', '#3B82F6'] as const,
-    secondaryActionGradient: ['#34D399', '#10B981'] as const, 
-    border: '#D1D5DB', // Slightly darker border for better definition
-    // Status colors for light mode
-    status_active: '#10B981',      // Green
-    status_completed: '#6B7280',  // Grey
-    status_pending: '#F59E0B',      // Amber/Orange
-    ratingStar: '#FBBF24',        // Gold for ratings
-    destructive: '#EF4444',       // Red for delete actions
+    shadow: 'rgba(50, 50, 93, 0.15)', 
+    primary: '#3B82F6',
+    secondary: '#10B981',
+    textPrimary: '#111827',
+    textSecondary: '#6B7280',
+    primaryGradient: ['#0EA5E9', '#2563EB'] as const, // Sharper Blue
+    secondaryActionGradient: ['#10B981', '#059669'] as const,
+    border: '#E5E7EB', // Subtle grey border
+    destructive: '#EF4444',
+    ratingStar: '#FBBF24',
+    glassBorder: 'rgba(255, 255, 255, 0.3)',
+    softBackground: '#F9FAFB', // For details block
 };
 
-
 type TripProps = {
-    trip:{
+    trip: {
         _id: Id<"trips">;
         _creationTime: number;
         description?: string;
         acceptedItemTypes?: string;
-        arrivalDate: string;
+        arrivalDate: number;
         originCountry: string;
         originCity: string;
         destinationCountry: string;
@@ -51,36 +50,23 @@ type TripProps = {
         originCountryCode: string;
         destinationCountryCode: string;
         airline: string;
-        traveler:{
+        traveler: {
             _id: string;
             username: string;
             image: string;
             rating?: number;
+            asTravelerrating: number;
         };
     }
 }
 
-// UPDATED: Status styles now use the new light-mode PALETTE
-const getStatusStyle = (status: string) => {
-    switch (status.toLowerCase()) {
-        case 'active':
-            return { backgroundColor: PALETTE.status_active };
-        case 'completed':
-            return { backgroundColor: PALETTE.status_completed };
-        case 'pending':
-            return { backgroundColor: PALETTE.status_pending };
-        default:
-            return { backgroundColor: PALETTE.textSecondary };
-    }
-};
+export default function Trip({ trip }: TripProps) {
+    // Initialize Translation
+    const { t, i18n } = useTranslation();
 
-
-export default function Trip({trip}: TripProps) {
-
-    const formattedDate = new Date(trip.arrivalDate).toLocaleDateString('en-US', {
-        month: 'long',
+    const formattedDate = new Date(trip.arrivalDate).toLocaleDateString(i18n.language, {
+        month: 'short',
         day: 'numeric',
-        year: 'numeric',
     });
 
     const acceptedItems = useMemo(() => {
@@ -88,145 +74,239 @@ export default function Trip({trip}: TripProps) {
         return trip.acceptedItemTypes.split(',').map(item => item.trim());
     }, [trip.acceptedItemTypes]);
 
-    const {user} = useUser()
-    const currentUser = useQuery(api.users.getUserByClerkId, user ? {clerkId: user?.id} : "skip")
-    const deleteTrip = useMutation(api.trips.deleteTrip)
+    const { user } = useUser();
+    const currentUser = useQuery(api.users.getUserByClerkId, user ? { clerkId: user?.id } : "skip");
+    const deleteTrip = useMutation(api.trips.deleteTrip);
 
-    const [isDeleteModalVisible, setDeleteModalVisible] = useState(false)
-    const [isEditModalVisible, setEditModalVisible] = useState(false)
+    const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [isEditModalVisible, setEditModalVisible] = useState(false);
+
+    // NEW: Function to handle Profile Click with Haptics and Navigation
+    const handleProfilePress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // Using router.push instead of Link component to allow Haptic execution before navigation
+        router.push(`/user/${trip.traveler._id}`);
+    };
 
     const handleDeleteWithConfirmation = () => {
-        handleDeleteTrip()
-        setDeleteModalVisible(false)
-    }
+        // NEW: Heavy haptic for destructive action confirmation
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        handleDeleteTrip();
+        setDeleteModalVisible(false);
+    };
 
     const handleEditWithConfirmation = () => {
-        router.push({ pathname: '/trips', params: { trip: JSON.stringify(trip) } })
-        setEditModalVisible(false)
-    }
+        // NEW: Medium haptic for edit confirmation
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        router.push({ pathname: '/trips', params: { trip: JSON.stringify(trip) } });
+        setEditModalVisible(false);
+    };
 
     const handleDeleteTrip = async () => {
         try {
-            await deleteTrip({ tripId: trip._id })
+            await deleteTrip({ tripId: trip._id });
         } catch (error) {
-            alert("Error deleting the trip")
+            alert(t('trip_component.delete_error'));
         }
-    }
+    };
 
     const handleSendOffer = async () => {
+        // NEW: Medium haptic for primary action
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
             router.push({
-                pathname:'/(stack)/orders',
+                pathname: '/(stack)/orders',
                 params: {
                     travelerId: trip.traveler._id,
                     tripId: trip._id
                 }
-            })
+            });
         } catch (error) {
-            alert("Error sending offer")
+            alert(t('trip_component.offer_error'));
         }
-    }
+    };
     
     type StarDisplayProps = {
         rating?: number;
         size?: number;
     };
 
-    // --- UPGRADED StarDisplay Component ---
-    // Now uses MaterialIcons for a cleaner look and supports decimal ratings (e.g., 4.5)
-    const StarDisplay = ({ rating=0, size = 16 }: StarDisplayProps) => (
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {[1, 2, 3, 4, 5].map((star) => {
-          if (rating >= star) {
-            // Full star
-            return <MaterialIcons key={star} name="star" size={size} color={PALETTE.ratingStar} />;
-          }
-          if (rating >= star - 0.5) {
-            // Half star for decimal ratings
-            return <MaterialIcons key={star} name="star-half" size={size} color={PALETTE.ratingStar} />;
-          }
-          // Empty star
-          return <MaterialIcons key={star} name="star-border" size={size} color={PALETTE.ratingStar} />;
-        })}
+    const StarDisplay = ({ rating = 0, size = 14 }: StarDisplayProps) => (
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+        <MaterialIcons name="star" size={size} color={PALETTE.ratingStar} style={{marginRight: 2}} />
+        <Text style={{fontSize: 12, fontWeight: '700', color: '#B45309'}}>{rating > 0 ? rating.toFixed(1) : t('trip_component.labels.new')}</Text>
       </View>
     );
 
     const animation = useRef<LottieView>(null);
-    useEffect(() => {
-        // animation.current?.play();
-    }, []);
 
-    function MapsTo(arg0: string, arg1: { travelerId: string; tripId: string; }): ((event: import("react-native").GestureResponderEvent) => void) | undefined {
-        throw new Error('Function not implemented.');
-    }
+    // 2. BUG FIX: User Loading State
+    // We check if currentUser is undefined. If so, we are still loading.
+    const isLoadingUser = currentUser === undefined;
+    const isOwnTrip = currentUser?._id === trip.traveler._id;
 
     return (
     <Animated.View style={cardStyles.cardContainer} entering={FadeIn.duration(500)}>
-        {/* Modals updated with light theme styles */}
-        <Modal animationType='fade' transparent={true} visible={isDeleteModalVisible} onRequestClose={() => setDeleteModalVisible(false)}>
-            <View style={cardStyles.modalCenteredView}><View style={cardStyles.modalView}><Text style={cardStyles.modalTitle}>Confirm Deletion</Text><Text style={cardStyles.modalText}>Are you sure you want to delete this trip? This action cannot be undone.</Text><View style={cardStyles.modalButtonContainer}><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setDeleteModalVisible(false)}><Text style={cardStyles.modalButtonText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleDeleteWithConfirmation}><Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>Confirm</Text></TouchableOpacity></View></View></View>
-        </Modal>
-        <Modal animationType='fade' transparent={true} visible={isEditModalVisible} onRequestClose={() => setEditModalVisible(false)}>
-            <View style={cardStyles.modalCenteredView}><View style={cardStyles.modalView}><Text style={cardStyles.modalTitle}>Confirm Edit</Text><Text style={cardStyles.modalText}>Are you sure you want to edit this trip? You will be taken to the editing screen.</Text><View style={cardStyles.modalButtonContainer}><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setEditModalVisible(false)}><Text style={cardStyles.modalButtonText}>Cancel</Text></TouchableOpacity><TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleEditWithConfirmation}><Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>Confirm</Text></TouchableOpacity></View></View></View>
+        
+        {/* === Delete Modal === */}
+        <Modal 
+            animationType='fade' 
+            transparent={true} 
+            visible={isDeleteModalVisible} 
+            onRequestClose={() => setDeleteModalVisible(false)}
+        >
+            <View style={cardStyles.modalCenteredView}>
+                <View style={cardStyles.modalView}>
+                    <Text style={cardStyles.modalTitle}>{t('trip_component.modals.delete.title')}</Text>
+                    <Text style={cardStyles.modalText}>{t('trip_component.modals.delete.text')}</Text>
+                    <View style={cardStyles.modalButtonContainer}>
+                        <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setDeleteModalVisible(false)}>
+                            <Text style={cardStyles.modalButtonText}>{t('trip_component.modals.delete.cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleDeleteWithConfirmation}>
+                            <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>{t('trip_component.modals.delete.confirm')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
         </Modal>
 
-        {/* Card Header */}
+        {/* === Edit Modal === */}
+        <Modal 
+            animationType='fade' 
+            transparent={true} 
+            visible={isEditModalVisible} 
+            onRequestClose={() => setEditModalVisible(false)}
+        >
+            <View style={cardStyles.modalCenteredView}>
+                <View style={cardStyles.modalView}>
+                    <Text style={cardStyles.modalTitle}>{t('trip_component.modals.edit.title')}</Text>
+                    <Text style={cardStyles.modalText}>{t('trip_component.modals.edit.text')}</Text>
+                    <View style={cardStyles.modalButtonContainer}>
+                        <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setEditModalVisible(false)}>
+                            <Text style={cardStyles.modalButtonText}>{t('trip_component.modals.edit.cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleEditWithConfirmation}>
+                            <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>{t('trip_component.modals.edit.confirm')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+
+        {/* === Card Header === */}
         <View style={cardStyles.cardHeader}>
-            <Link href={`/user/${trip.traveler._id}`} asChild><TouchableOpacity style={cardStyles.travelerInfo}><Image source={{ uri: trip.traveler.image }} style={cardStyles.travelerAvatar} contentFit='cover' transition={200} cachePolicy="memory-disk"/><Text style={cardStyles.travelerName}>{trip.traveler.username}</Text></TouchableOpacity></Link>
-            {trip.traveler._id === currentUser?._id ? (
-                // IF owner, show Edit and Delete buttons
+            <TouchableOpacity style={cardStyles.travelerInfo} onPress={handleProfilePress}>
+                <Image 
+                    source={{ uri: trip.traveler.image }} 
+                    style={cardStyles.travelerAvatar} 
+                    contentFit='cover' 
+                    transition={200} 
+                    cachePolicy="memory-disk"
+                />
+                <View>
+                    <Text style={cardStyles.travelerName}>{trip.traveler.username}</Text>
+                    {/* Airline moved here for better space usage */}
+                    {trip.airline ? (
+                        <Text style={cardStyles.airlineText}>{trip.airline}</Text>
+                    ) : null}
+                </View>
+            </TouchableOpacity>
+
+            {isOwnTrip ? (
                 <View style={cardStyles.headerActions}>
-                    <TouchableOpacity style={cardStyles.actionIcon} onPress={() => setEditModalVisible(true)}>
-                        <MaterialCommunityIcons name="pencil-outline" size={22} color={PALETTE.textSecondary} />
+                    <TouchableOpacity style={cardStyles.actionIcon} onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setEditModalVisible(true);
+                    }}>
+                        <MaterialCommunityIcons name="pencil-outline" size={20} color={PALETTE.textSecondary} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={cardStyles.actionIcon} onPress={() => setDeleteModalVisible(true)}>
-                        <MaterialCommunityIcons name="trash-can-outline" size={22} color={PALETTE.destructive} />
+                    <TouchableOpacity style={[cardStyles.actionIcon, { marginLeft: 12 }]} onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setDeleteModalVisible(true);
+                    }}>
+                        <MaterialCommunityIcons name="trash-can-outline" size={20} color={PALETTE.destructive} />
                     </TouchableOpacity>
                 </View>
             ) : (
-                // IF NOT owner, show the star rating
-                <StarDisplay rating={trip.traveler.rating} />
+                <StarDisplay rating={trip.traveler.asTravelerrating} />
             )}
         </View>
 
-        {/* Travel Route Visualization */}
-        <View style={cardStyles.travelRouteContainer}>
-            <View style={cardStyles.locationPoint}><CountryFlag isoCode={trip.originCountryCode.toLowerCase()} size={16} /><Text style={cardStyles.cityText}>{trip.originCity}</Text><Text style={cardStyles.countryText}>{trip.originCountry}</Text></View>
-            <View style={cardStyles.routeLine}><View style={cardStyles.dot} /><View style={cardStyles.dashedLine} /><LottieView ref={animation} style={cardStyles.lottiePlane} source={require('@/assets/animations/airplane.json')} autoPlay loop /><View style={cardStyles.dashedLine} /><View style={cardStyles.dot} /></View>
-            <View style={cardStyles.locationPoint}><CountryFlag isoCode={trip.destinationCountryCode.toLowerCase()} size={16} /><Text style={cardStyles.cityText}>{trip.destinationCity}</Text><Text style={cardStyles.countryText}>{trip.destinationCountry}</Text></View>
+        {/* === Travel Route Visualization (The "Ticket" Look) === */}
+        <View style={cardStyles.routeContainer}>
+            <View style={cardStyles.locationBlockLeft}>
+                <Text style={cardStyles.cityCode}>{trip.originCountryCode}</Text>
+                <Text style={cardStyles.cityName} numberOfLines={1}>{trip.originCity}</Text>
+                <View style={cardStyles.flagWrapper}>
+                     <CountryFlag isoCode={trip.originCountryCode.toLowerCase()} size={12} />
+                </View>
+            </View>
+
+            {/* Animation Center */}
+            <View style={cardStyles.routeGraphic}>
+                <LottieView 
+                    ref={animation} 
+                    style={cardStyles.lottiePlane} 
+                    source={require('@/assets/animations/airplane.json')} 
+                    autoPlay 
+                    loop 
+                />
+                <View style={cardStyles.dottedLine} />
+            </View>
+
+            <View style={cardStyles.locationBlockRight}>
+                <Text style={cardStyles.cityCode}>{trip.destinationCountryCode}</Text>
+                <Text style={cardStyles.cityName} numberOfLines={1}>{trip.destinationCity}</Text>
+                <View style={cardStyles.flagWrapper}>
+                     <CountryFlag isoCode={trip.destinationCountryCode.toLowerCase()} size={12} />
+                </View>
+            </View>
         </View>
-        
-        {/* Airline Info */}
-        {trip.airline && (<View style={cardStyles.airlineInfoContainer}><MaterialIcons name="airplanemode-active" size={14} color={PALETTE.textSecondary} /><Text style={cardStyles.airlineText}>{trip.airline}</Text></View>)}
 
-        {/* Divider */}
-        <View style={cardStyles.divider} />
-
-        {/* Core Details Container */}
-        <View style={cardStyles.detailsContainer}>
-            <View style={cardStyles.detailItem}><MaterialCommunityIcons name="calendar-month-outline" size={20} color={PALETTE.primary} /><View style={cardStyles.detailTextContainer}><Text style={cardStyles.detailLabel}>Arrival Date</Text><Text style={cardStyles.detailValue}>{formattedDate}</Text></View></View>
-            <View style={cardStyles.detailItem}><MaterialCommunityIcons name="bag-carry-on" size={20} color={PALETTE.primary} /><View style={cardStyles.detailTextContainer}><Text style={cardStyles.detailLabel}>Free Space</Text><Text style={cardStyles.detailValue}>{trip.availableSpace}</Text></View></View>
+        {/* === Core Details Block (Grey Background) === */}
+        <View style={cardStyles.detailsBlock}>
+            <View style={cardStyles.detailItem}>
+                <MaterialCommunityIcons name="calendar-month" size={16} color={PALETTE.primary} />
+                <Text style={cardStyles.detailValue}>{formattedDate}</Text>
+            </View>
+            <View style={cardStyles.detailSeparator} />
+            <View style={cardStyles.detailItem}>
+                <MaterialCommunityIcons name="bag-suitcase" size={16} color={PALETTE.primary} />
+                <Text style={cardStyles.detailValue}>{trip.availableSpace}</Text>
+            </View>
         </View>
 
-        {/* Accepted Items Section */}
+        {/* === Accepted Items === */}
         {acceptedItems.length > 0 && (
-            <View style={cardStyles.acceptedItemsContainer}>
-                <MaterialCommunityIcons name="package-variant-closed-check" size={18} color={PALETTE.primary} />
-                <Text style={cardStyles.acceptedItemsText}>
-                    Accepts: {acceptedItems.join(' • ')}
-                </Text>
+            <View style={cardStyles.tagsContainer}>
+                {acceptedItems.slice(0, 3).map((item, index) => (
+                    <View key={index} style={cardStyles.tag}>
+                         <Text style={cardStyles.tagText}>{t(`categories.${item}`)}</Text>
+                    </View>
+                ))}
+                {acceptedItems.length > 3 && (
+                     <Text style={cardStyles.moreTagsText}>+{acceptedItems.length - 3}</Text>
+                )}
             </View>
         )}
         
-        {/* Action Button */}
-        {trip.traveler._id !== currentUser?._id && (
-            <TouchableOpacity onPress={handleSendOffer} style={{marginTop: 16}} activeOpacity={0.8}> {/* Changed to TouchableOpacity for better feedback */}
-                <LinearGradient colors={PALETTE.primaryGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={cardStyles.actionButton}>
-                    <FontAwesome5 name="paper-plane" size={16} color="#FFFFFF" solid/>
-                    <Text style={cardStyles.actionButtonText}>Request Delivery</Text>
+        {/* === Action Button (BUG FIXED: No Flashing) === */}
+        {/* Only render if user is loaded AND it's not their own trip */}
+        {!isLoadingUser && !isOwnTrip && (
+            <TouchableOpacity onPress={handleSendOffer} style={{marginTop: 16}} activeOpacity={0.9}>
+                <LinearGradient 
+                    colors={PALETTE.primaryGradient} 
+                    start={{ x: 0, y: 0 }} 
+                    end={{ x: 1, y: 1 }} 
+                    style={cardStyles.actionButton}
+                >
+                    <Text style={cardStyles.actionButtonText}>{t('trip_component.labels.request_delivery')}</Text>
+                    <FontAwesome5 name="arrow-right" size={14} color="#FFFFFF" style={{marginLeft: 8}}/>
                 </LinearGradient>
             </TouchableOpacity>
         )}
+
     </Animated.View>
     );
 }
@@ -235,228 +315,245 @@ export default function Trip({trip}: TripProps) {
 const cardStyles = StyleSheet.create({
     cardContainer: { 
         backgroundColor: PALETTE.surface, 
-        borderRadius: 16, 
-        padding: 14, 
-        marginVertical: 10, // Increased marginVertical slightly to give more breathing room
-        marginHorizontal: 16, 
+        borderRadius: 24, // Matches Index screen cards
+        padding: 20, 
+        marginVertical: 10,
+        marginHorizontal: 20, 
         shadowColor: PALETTE.shadow, 
-        shadowOffset: { width: 0, height: 6 }, // Increased shadow offset for more depth
-        shadowOpacity: 0.35, // Increased shadow opacity further
-        shadowRadius: 18, // Increased shadow radius for a softer, more spread-out shadow
-        elevation: 8, // Increased elevation for Android
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: 6,
         borderWidth: 1,
-        borderColor: PALETTE.border, // Slightly darker border
+        borderColor: PALETTE.border,
     },
+    
+    // Header
     cardHeader: { 
         flexDirection: 'row', 
         justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 12 
+        alignItems: 'flex-start', 
+        marginBottom: 16 
     },
     travelerInfo: { 
         flexDirection: 'row', 
         alignItems: 'center' 
     },
     travelerAvatar: { 
-        width: 36, 
-        height: 36, 
-        borderRadius: 18, 
-        marginRight: 10 
+        width: 40, 
+        height: 40, 
+        borderRadius: 20, 
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: PALETTE.border
     },
     travelerName: { 
         fontSize: 15, 
-        fontWeight: '600', 
-        color: PALETTE.textPrimary 
+        fontWeight: '700', 
+        color: PALETTE.textPrimary,
+        marginBottom: 2,
+    },
+    airlineText: { 
+        color: PALETTE.textSecondary, 
+        fontSize: 12, 
+        fontWeight: '500' 
     },
     headerActions: { 
         flexDirection: 'row', 
         alignItems: 'center' 
     },
-    statusBadge: { 
-        paddingVertical: 4, 
-        paddingHorizontal: 12, 
-        borderRadius: 12 
+    actionIcon: { 
+        padding: 4 
     },
-    statusBadgeText: { 
-        color: '#FFFFFF', 
-        fontSize: 12, 
-        fontWeight: '700' 
-    },
-    actionIcon: { marginLeft: 16 }, // Provides spacing between the edit and delete icons
-    travelRouteContainer: { 
+
+    // Route Visualization
+    routeContainer: { 
         flexDirection: 'row', 
         alignItems: 'center', 
-        justifyContent: 'space-between',
+        justifyContent: 'space-between', 
+        marginBottom: 16,
     },
-    locationPoint: { 
-        alignItems: 'center', 
-        flex: 1, 
-        paddingHorizontal: 4 
+    locationBlockLeft: {
+        alignItems: 'flex-start',
+        flex: 1,
     },
-    cityText: { 
-        fontSize: 16, 
-        fontWeight: 'bold', 
-        color: PALETTE.textPrimary, 
-        marginTop: 4 
+    locationBlockRight: {
+        alignItems: 'flex-end',
+        flex: 1,
     },
-    countryText: { 
-        fontSize: 12, 
-        color: PALETTE.textSecondary 
+    cityCode: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: PALETTE.textPrimary,
+        letterSpacing: 0.5,
     },
-    routeLine: { 
-        flex: 1.5, 
-        flexDirection: 'row', 
-        alignItems: 'center' 
+    cityName: {
+        fontSize: 12,
+        color: PALETTE.textSecondary,
+        fontWeight: '500',
+        marginTop: 2,
+        maxWidth: 80,
     },
-    dot: { 
-        width: 6, 
-        height: 6, 
-        borderRadius: 3, 
-        backgroundColor: PALETTE.textSecondary 
+    flagWrapper: {
+        marginTop: 6,
+        borderRadius: 2,
+        overflow: 'hidden',
     },
-    dashedLine: { 
-        height: 1, 
-        flex: 1, 
-        borderBottomWidth: 1, 
-        borderBottomColor: PALETTE.textSecondary, 
-        borderStyle: 'dashed' 
-    },
-    lottiePlane: { 
-        width: 32, 
-        height: 32 
-    },
-    airlineInfoContainer: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-    },
-    airlineText: { 
-        color: PALETTE.textSecondary, 
-        fontSize: 12, 
-        marginLeft: 4, 
-        fontWeight: '500' 
-    },
-    divider: {
-        height: 1,
-        backgroundColor: PALETTE.border,
-        marginVertical: 10, // Adjusted vertical margin
-    },
-    detailsContainer: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-around', 
+    
+    // Graphic Middle
+    routeGraphic: {
+        flex: 1.5,
         alignItems: 'center',
-        marginBottom: 8, // Added a small bottom margin
+        justifyContent: 'center',
+        position: 'relative',
+        height: 40,
     },
-    detailItem: { 
-        flex: 1, 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        justifyContent: 'flex-start', 
-        paddingLeft: 10, 
+    dottedLine: {
+        position: 'absolute',
+        width: '100%',
+        height: 1,
+        borderBottomWidth: 1,
+        borderColor: '#CBD5E1',
+        borderStyle: 'dashed',
+        zIndex: 0,
     },
-    detailTextContainer: { 
-        marginLeft: 8, 
-        alignItems: 'flex-start' 
+    lottiePlane: {
+        width: 36,
+        height: 36,
+        zIndex: 1,
+        marginBottom: 4, // Lifts the plane slightly above the line visual
     },
-    detailLabel: { 
-        fontSize: 11, 
-        color: PALETTE.textSecondary, 
-        marginBottom: 2, 
-        textTransform: 'uppercase', 
-        fontWeight: '600' 
-    },
-    detailValue: { 
-        fontSize: 13, 
-        fontWeight: '600', 
-        color: PALETTE.textPrimary 
-    },
-    acceptedItemsContainer: {
-        marginTop: 10, // Reduced top margin slightly
+
+    // Details Block
+    detailsBlock: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: `${PALETTE.primary}15`, // Slightly more opaque primary background for visibility
-        borderRadius: 10,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+        backgroundColor: PALETTE.softBackground,
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        justifyContent: 'space-around',
+        marginBottom: 12,
     },
-    acceptedItemsText: {
-        flex: 1,
+    detailItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    detailValue: {
+        fontSize: 13,
+        fontWeight: '600',
         color: PALETTE.textPrimary,
-        fontSize: 12,
-        fontWeight: '500',
-        marginLeft: 8,
     },
+    detailSeparator: {
+        width: 1,
+        height: 16,
+        backgroundColor: PALETTE.border,
+    },
+
+    // Tags
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        alignItems: 'center',
+    },
+    tag: {
+        backgroundColor: '#F3F4F6',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    tagText: {
+        fontSize: 11,
+        color: PALETTE.textSecondary,
+        fontWeight: '500',
+    },
+    moreTagsText: {
+        fontSize: 11,
+        color: PALETTE.textSecondary,
+        fontWeight: '500',
+        marginLeft: 2,
+    },
+
+    // Action Button
     actionButton: { 
-        borderRadius: 12, 
-        paddingVertical: 12, 
+        borderRadius: 14, 
+        paddingVertical: 14, 
         alignItems: 'center', 
         justifyContent: 'center', 
         flexDirection: 'row', 
         shadowColor: PALETTE.primary, 
         shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.3, 
-        shadowRadius: 5, 
-        elevation: 8 
+        shadowOpacity: 0.2, 
+        shadowRadius: 8, 
+        elevation: 4 
     },
     actionButtonText: { 
         color: '#FFFFFF', 
-        fontSize: 16, 
-        fontWeight: 'bold', 
-        marginLeft: 10 
+        fontSize: 15, 
+        fontWeight: '700', 
     },
+
+    // Modal Styles (Preserved but styled)
     modalCenteredView: { 
         flex: 1, 
         justifyContent: 'center', 
         alignItems: 'center', 
-        backgroundColor: 'rgba(0, 0, 0, 0.5)' 
+        backgroundColor: 'rgba(0, 0, 0, 0.4)' 
     },
     modalView: { 
         margin: 20, 
+        width: '85%',
         backgroundColor: PALETTE.surface, 
-        borderRadius: 16, 
-        padding: 25, 
+        borderRadius: 24, 
+        padding: 30, 
         alignItems: 'center', 
         shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 2 }, 
+        shadowOffset: { width: 0, height: 10 }, 
         shadowOpacity: 0.25, 
-        shadowRadius: 4, 
-        elevation: 5,
+        shadowRadius: 20, 
+        elevation: 10,
     },
     modalTitle: { 
-        marginBottom: 15, 
+        marginBottom: 10, 
         textAlign: 'center', 
         fontSize: 18, 
         fontWeight: 'bold', 
         color: PALETTE.textPrimary 
     },
     modalText: { 
-        marginBottom: 20, 
+        marginBottom: 24, 
         textAlign: 'center', 
         color: PALETTE.textSecondary, 
-        lineHeight: 20 
+        lineHeight: 22,
+        fontSize: 14
     },
     modalButtonContainer: { 
         flexDirection: 'row', 
         justifyContent: 'space-between', 
-        width: '100%' 
+        width: '100%',
+        gap: 12
     },
     modalButton: { 
-        borderRadius: 10, 
-        paddingVertical: 10, 
+        borderRadius: 12, 
+        paddingVertical: 12, 
         paddingHorizontal: 20, 
-        elevation: 2, 
         flex: 1, 
-        marginHorizontal: 5 
+        alignItems: 'center', 
+        justifyContent: 'center'
     },
     modalButtonCancel: { 
-        backgroundColor: PALETTE.border 
+        backgroundColor: '#F3F4F6' 
     },
     modalButtonConfirm: { 
         backgroundColor: PALETTE.destructive 
     },
     modalButtonText: { 
-        color: PALETTE.textSecondary, 
-        fontWeight: 'bold', 
-        textAlign: 'center' 
+        color: PALETTE.textPrimary, 
+        fontWeight: '600', 
+        fontSize: 14
     },
 });

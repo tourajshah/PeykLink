@@ -19,8 +19,28 @@ import {
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 
+// === TRANSLATION IMPORT ===
+import { useTranslation } from 'react-i18next';
+
+// --- Colors ---
+const COLORS = {
+    primary: '#007AFF',
+    background: '#F2F2F7',
+    card: '#FFFFFF',
+    textPrimary: '#000000',
+    textSecondary: '#8A8A8E',
+    separator: '#E5E5EA',
+    green: '#34C759',
+    orange: '#FF9500',
+    disabled: '#A9A9A9',
+    shadow: 'rgba(0,0,0,0.1)'
+};
+
 export default function PaymentScreen() {
     const router = useRouter();
+    // Initialize Translation
+    const { t } = useTranslation();
+
     const params = useLocalSearchParams();
     const negotiationId = params.negotiationId as Id<"negotiations">;
     
@@ -50,7 +70,7 @@ export default function PaymentScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <Ionicons name="alert-circle-outline" size={60} color={COLORS.primary} />
-                <Text style={styles.errorText}>Error loading payment details.</Text>
+                <Text style={styles.errorText}>{t('payment.loading_error')}</Text>
             </View>
         );      
     }
@@ -78,8 +98,8 @@ export default function PaymentScreen() {
         } catch (error: any) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(
-                "Payment Failed",
-                error.message || "Could not process payment. Please try again.",
+                t('payment.alerts.failed_title'),
+                error.message || t('payment.alerts.failed_msg'),
                 [{ text: "OK" }]
             );
             console.error(error);
@@ -108,14 +128,14 @@ export default function PaymentScreen() {
                 >
                     <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Confirm and Pay</Text>
+                <Text style={styles.headerTitle}>{t('payment.title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
             
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* Traveler Info Card */}
                 <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Delivery Partner</Text>
+                    <Text style={styles.sectionTitle}>{t('payment.delivery_partner')}</Text>
                     <View style={styles.card}>
                         <View style={styles.travelerInfo}>
                             <Ionicons name="person-circle-outline" size={50} color={COLORS.primary} />
@@ -127,14 +147,14 @@ export default function PaymentScreen() {
                         {/* Verified Section Added Here */}
                         <View style={styles.verifiedBadge}>
                             <Ionicons name="shield-checkmark" size={16} color={COLORS.green} />
-                            <Text style={styles.verifiedText}>Verified Traveler</Text>
+                            <Text style={styles.verifiedText}>{t('payment.verified_traveler')}</Text>
                         </View>
                     </View>
                 </View>
                 
                 {/* Payment Method Card (Mock) */}
                 <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Payment Method</Text>
+                    <Text style={styles.sectionTitle}>{t('payment.payment_method')}</Text>
                     <TouchableOpacity style={styles.card} disabled={isProcessing}>
                         <View style={styles.paymentMethod}>
                             <View style={styles.cardIcon}>
@@ -150,19 +170,19 @@ export default function PaymentScreen() {
                 
                 {/* Order Summary Card */}
                 <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Order Summary</Text>
+                    <Text style={styles.sectionTitle}>{t('payment.order_summary')}</Text>
                     <View style={styles.card}>
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>{request.productName} (x{request.quantity})</Text>
                             <Text style={styles.summaryValue}>${itemTotal.toFixed(2)}</Text>
                         </View>
                         <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Delivery Fee</Text>
+                            <Text style={styles.summaryLabel}>{t('payment.delivery_fee')}</Text>
                             <Text style={styles.summaryValue}>${deliveryFee.toFixed(2)}</Text>
                         </View>
                         <View style={styles.separator} />
                         <View style={styles.summaryRow}>
-                            <Text style={styles.totalLabel}>Total</Text>
+                            <Text style={styles.totalLabel}>{t('payment.total')}</Text>
                             <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
                         </View>
                     </View>
@@ -174,7 +194,7 @@ export default function PaymentScreen() {
                 <View style={styles.securityNotice}>
                     <Ionicons name="lock-closed" size={16} color={COLORS.textSecondary} />
                     <Text style={styles.securityText}>
-                        Your payment is held securely until you confirm delivery.
+                        {t('payment.security_notice')}
                     </Text>
                 </View>
                 <TouchableOpacity
@@ -186,7 +206,7 @@ export default function PaymentScreen() {
                         <ActivityIndicator color="#FFFFFF" />
                     ) : (
                         <Text style={styles.payButtonText}>
-                            Pay ${total.toFixed(2)}
+                            {t('payment.pay_btn', { amount: total.toFixed(2) })}
                         </Text>
                     )}
                 </TouchableOpacity>
@@ -204,14 +224,14 @@ export default function PaymentScreen() {
                         <View style={styles.successIcon}>
                             <Ionicons name="checkmark-circle" size={80} color={COLORS.green} />
                         </View>
-                        <Text style={styles.successTitle}>Payment Successful!</Text>
+                        <Text style={styles.successTitle}>{t('payment.success_title')}</Text>
                         <Text style={styles.successSubtext}>
-                            Your order is confirmed. Please share the code below with your traveler upon receiving your item.
+                            {t('payment.success_msg')}
                         </Text>
                         
                         {/* Delivery Code Display */}
                         <View style={styles.codeContainer}>
-                            <Text style={styles.codeLabel}>Your Delivery Code</Text>
+                            <Text style={styles.codeLabel}>{t('payment.delivery_code')}</Text>
                             <Text style={styles.codeText}>{deliveryCode}</Text>
                         </View>
                         
@@ -219,7 +239,7 @@ export default function PaymentScreen() {
                             style={styles.continueButton}
                             onPress={handleSuccessClose}
                         >
-                            <Text style={styles.continueButtonText}>View Order Details</Text>
+                            <Text style={styles.continueButtonText}>{t('payment.view_order_btn')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -227,21 +247,6 @@ export default function PaymentScreen() {
         </SafeAreaView>
     );
 }
-
-
-// --- Styles ---
-const COLORS = {
-    primary: '#007AFF',
-    background: '#F2F2F7',
-    card: '#FFFFFF',
-    textPrimary: '#000000',
-    textSecondary: '#8A8A8E',
-    separator: '#E5E5EA',
-    green: '#34C759',
-    orange: '#FF9500',
-    disabled: '#A9A9A9',
-    shadow: 'rgba(0,0,0,0.1)'
-};
 
 const styles = StyleSheet.create({
     container: {

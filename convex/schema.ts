@@ -9,9 +9,19 @@ export default defineSchema({
         email: v.string(),
         bio: v.optional(v.string()),
         imageURL: v.string(),
+        isVerified: v.boolean(),
+        walletBalance: v.number(),
         rating: v.optional(v.number()),
+        asTravelerRating: v.optional(v.number()),
+        asRequesterRating: v.optional(v.number()),
+        communicationRating: v.optional(v.number()),
+        punctualityRating: v.optional(v.number()),
+        itemConditionRating: v.optional(v.number()),
         clerkId: v.string(),
         completedOrders: v.number(),
+        travelerCompletedOrders: v.number(),
+        requesterCompletedOrders: v.number(),
+        
     }).index("by_clerk_id", ["clerkId"]),
 
     requests: defineTable({
@@ -136,7 +146,11 @@ export default defineSchema({
         negotiationId: v.id("negotiations"),
         reviewerId: v.id("users"),
         revieweeId: v.id("users"),
+        revieweeRole: v.union(v.literal("traveler"), v.literal("requester")),
         rating: v.number(),
+        communicationRating: v.optional(v.number()),
+        punctualityRating: v.optional(v.number()),
+        itemConditionRating: v.optional(v.number()),
         comment: v.optional(v.string()),
         status: v.union(
             v.literal("hidden"),
@@ -145,6 +159,7 @@ export default defineSchema({
         createdAt: v.float64(),
     }).index("by_negotiationId", ["negotiationId"])
       .index("by_revieweeId", ["revieweeId"])
+      .index("by_reviewee_role", ["revieweeRole"])
       .index("by_status", ["status"]),
 
 

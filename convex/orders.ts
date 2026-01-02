@@ -199,11 +199,11 @@ export const confirmDelivery = mutation({
             throw new Error("Order not found");
         }
         
-        const requester = await ctx.db.get(order.requesterId)
-        const traveler = await ctx.db.get(order.travelerId)
+        const requester = await ctx.db.get(order.requesterId);
+        const traveler = await ctx.db.get(order.travelerId);
 
         if (!requester || !traveler) {
-            throw new Error ("Traveler or Requester for this delevery couldnt be found")
+            throw new Error("Traveler or Requester for this delivery couldn't be found");
         }
 
         // Only traveler can confirm
@@ -213,26 +213,51 @@ export const confirmDelivery = mutation({
         
         // Check if already completed
         if (order.paymentStatus === "completed") {
-            throw new Error("Order already completed");
+            return { success: false, message: "Order already completed" };
         }
         
         // Check attempts limit (prevent brute force)
-        if (order.codeAttempts >= 3) {
-            await ctx.db.patch(args.orderId, {
-                paymentStatus: "disputed",
-            });
-            throw new Error("Too many failed attempts. Order flagged for review.");
+        // FIX: Increased limit to 5 to match your description
+        if (order.codeAttempts >= 5) { 
+            return { 
+                success: false, 
+                error: "TOO_MANY_ATTEMPTS",
+                message: "Too many failed attempts. Order flagged for review." 
+            };
         }
         
         // Hash entered code and compare
         const hashedEntered = hashCode(args.enteredCode);
         
         if (hashedEntered !== order.deliveryCode) {
-            // Increment failed attempts
+            // FIX: Calculate new attempts safely
+            const newAttempts = (order.codeAttempts || 0) + 1;
+
+            // FIX: Increment failed attempts
+            // Since we return (and don't throw), this patch WILL persist in the DB
             await ctx.db.patch(args.orderId, {
-                codeAttempts: (order.codeAttempts || 0) + 1,
+                codeAttempts: newAttempts,
             });
-            throw new Error("Incorrect delivery code");
+
+            // FIX: If we just hit the limit, flag it now
+            if (newAttempts >= 5) {
+                await ctx.db.patch(args.orderId, {
+                    paymentStatus: "disputed",
+                });
+                return { 
+                    success: false, 
+                    error: "TOO_MANY_ATTEMPTS",
+                    message: "Too many failed attempts. Order flagged." 
+                };
+            }
+
+            // FIX: Return failure object instead of throwing Error
+            return { 
+                success: false, 
+                error: "INCORRECT_CODE",
+                message: "Incorrect delivery code",
+                attempts: newAttempts 
+            };
         }
         
         // SUCCESS! Release funds
@@ -249,18 +274,23 @@ export const confirmDelivery = mutation({
         // UPDATE PARENT NEGOTIATION 
         await ctx.db.patch(order.negotiationId, {
             status: "completed"
-        })
+        });
 
-        // UPDATE COMPELETED ORDERS OF BOTH PARTIES
-
+        // UPDATE COMPLETED ORDERS OF BOTH PARTIES
+        // FIX: Added ( || 0) to prevent NaN if completedOrders is undefined
         await ctx.db.patch(requester._id, {
-            completedOrders: (requester.completedOrders) + 1
-        })
+            requesterCompletedOrders: (requester.requesterCompletedOrders || 0) + 1,
+            completedOrders: (requester.completedOrders || 0)  + 1
+        });
         
         await ctx.db.patch(traveler._id, {
-            completedOrders: (traveler.completedOrders) + 1
-        })
+            travelerCompletedOrders: (traveler.travelerCompletedOrders || 0) + 1,
+            completedOrders: (traveler.completedOrders || 0) + 1
+        });
 
+        await ctx.db.patch(traveler._id, {
+            walletBalance: (traveler.walletBalance) + (order.totalAmount)
+        })
 
         // TODO: Trigger review notifications here
         

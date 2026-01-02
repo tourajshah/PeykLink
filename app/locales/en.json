@@ -1,0 +1,440 @@
+{
+  "welcome_back": "Welcome back,",
+  "where_to": "Where to?",
+  "filter_route": "Filter Route",
+  "clear": "Clear",
+  "origin_city": "Origin City",
+  "destination_city": "Destination City",
+  "filter_categories": "Filter Categories",
+  "filtered": "Filtered",
+  "trips": "Trips",
+  "requests": "Requests",
+  "no_items_found": "No {{type}} found",
+  "no_items_subtitle": "There are no active {{type}} matching your search.\nTry changing your filters.",
+  "categories": {
+    "Electronics": "Electronics",
+    "Clothing": "Clothing",
+    "Documents": "Documents",
+    "Books": "Books",
+    "Cosmetics": "Cosmetics",
+    "Pets": "Pets",
+    "Cigars": "Cigars",
+    "Medication": "Medication"
+  },
+  "create_new": "Create New",
+  "connect_prompt": "How do you want to connect today?",
+  "post_trip": "Post a Trip",
+  "post_trip_desc": "Traveling soon? Offset your costs by delivering items.",
+  "earn_money": "Earn Money",
+  "meet_locals": "Meet Locals",
+  "make_request": "Make a Request",
+  "make_request_desc": "Can't find it locally? Get products from anywhere in the world.",
+  "shop_global": "Shop Global",
+  "secure_escrow": "Secure Escrow",
+  "footer_trust": "Secure Payments • Verified Travelers"
+  ,
+  "explore": {
+    "title": "Explore",
+    "subtitle": "Connect your travels with earnings.",
+    "network": "YOUR NETWORK",
+    "matched_travelers": "Matched Travelers",
+    "open_requests": "Open Requests",
+    "incoming_travelers": "Incoming Travelers",
+    "incoming_desc": "People flying to your city.",
+    "delivery_jobs": "Delivery Jobs",
+    "delivery_desc": "Earn money by delivering items on your trips.",
+    "potential_earnings": "POTENTIAL EARNINGS"
+  },
+  "cards": {
+    "requesting_item": "Requesting Item",
+    "due_date": "Due {{date}}",
+    "item_price": "Item Price:",
+    "reward": "REWARD",
+    "total_cost": "TOTAL COST",
+    "make_offer": "Make Offer",
+    "available": "Available",
+    "for_requests": "for Requests",
+    "request_delivery": "Request Delivery",
+    "traveler_default": "Traveler"
+  },
+  "empty_states": {
+    "no_incoming": "No Incoming Travelers",
+    "scanning_network": "We are scanning the network for trips matching your location.",
+    "create_request": "Create a Request",
+    "no_jobs": "No Delivery Jobs",
+    "unlock_earnings": "Post your upcoming trip to unlock delivery requests and earn money.",
+    "create_trip": "Create Trip"
+  },
+  "alerts": {
+    "no_matching_trip": "No Matching Trip",
+    "need_trip_msg": "You need a trip from {{origin}} to {{dest}} to make an offer.",
+    "invalid_fee": "Invalid Fee",
+    "enter_valid_amount": "Please enter a valid amount.",
+    "offer_exists": "Offer Exists",
+    "offer_exists_msg": "You already made an offer on this item.",
+    "error": "Error",
+    "send_offer_error": "Could not send offer."
+  },
+  "modals": {
+    "make_offer_title": "Make an Offer",
+    "make_offer_subtitle": "How much do you want to earn for delivering this?",
+    "send_offer_btn": "Send Offer"
+  }
+  ,
+  "profile": {
+    "title": "Profile",
+    "joined": "Joined {{date}}",
+    "edit_profile": "Edit Profile",
+    "tabs": {
+      "traveler": "Traveler",
+      "shopper": "Shopper"
+    },
+    "stats": {
+      "deliveries": "Deliveries",
+      "orders": "Orders",
+      "rating": "Rating",
+      "reliability": "Reliability",
+      "new": "New"
+    },
+    "filter": {
+      "active": "Active",
+      "history": "History",
+      "reviews": "Reviews"
+    },
+    "subtitle": {
+      "reviews": "{{count}} reviews as {{role}}",
+      "items": "{{count}} {{status}} items found"
+    },
+    "toast": {
+      "username_copied": "Username Copied"
+    },
+    "share_msg": "Check out {{name}}'s profile on GrabrApp!",
+    "modals": {
+      "edit": {
+        "title": "Edit Profile",
+        "fullname_label": "Full Name",
+        "fullname_placeholder": "Your Name",
+        "bio_label": "Bio",
+        "bio_placeholder": "Tell us about yourself...",
+        "save_btn": "Save Changes"
+      },
+      "wallet": {
+        "title": "Transaction History",
+        "empty_title": "No transactions yet",
+        "empty_desc": "When you complete a delivery or withdraw funds, your history will appear here.",
+        "fund_btn": "Fund Wallet (Coming Soon)"
+      }
+    },
+    "empty": {
+      "no_reviews": "No Reviews Yet",
+      "no_active": "No Active Items",
+      "archive_empty": "Archive Empty",
+      "desc_reviews": "You haven't received any feedback from the community yet.",
+      "desc_active": "You don't have any active {{type}} at the moment.",
+      "desc_archive": "Your completed or archived items will appear here."
+    }
+  }
+  ,
+  "inbox": {
+    "title": "Inbox",
+    "search_placeholder": "Search items or users...",
+    "tabs": {
+      "all": "All",
+      "sent": "Sent",
+      "received": "Received"
+    },
+    "status": {
+      "found_result": "Found {{count}} result",
+      "found_results": "Found {{count}} results",
+      "showing_chat": "Showing {{count}} active chat",
+      "showing_chats": "Showing {{count}} active chats"
+    },
+    "empty": {
+      "no_messages": "No messages",
+      "no_new_negotiations": "New negotiations will appear here.",
+      "no_results": "No results found",
+      "adjust_search": "Try adjusting your search terms.",
+      "no_sent": "No Sent Offers",
+      "no_sent_desc": "Offers you've made to travelers/shoppers will show up here.",
+      "no_received": "No Received Offers",
+      "no_received_desc": "Offers you've received from others will show up here."
+    }
+  }
+  ,
+  "create_trip": {
+    "title_edit": "Edit Trip",
+    "title_plan": "Plan Trip",
+    "btn_save": "Save Changes",
+    "btn_post": "Post Trip",
+    "sections": {
+      "route": "Route",
+      "details": "Details",
+      "capacity": "Capacity",
+      "allowed_items": "Allowed Items"
+    },
+    "labels": {
+      "origin": "Origin",
+      "destination": "Destination",
+      "city_placeholder": "City, Country",
+      "arrival_date": "Arrival Date",
+      "airline": "Airline",
+      "select_airline": "Select Airline",
+      "search_airline_placeholder": "Search e.g. Emirates"
+    },
+    "units": {
+      "kg": "Kg",
+      "gr": "Gr"
+    },
+    "info_warning": "You are responsible for checking airline regulations for special items.",
+    "errors": {
+      "origin": "Please select a valid origin city from the list.",
+      "destination": "Please select a valid destination city from the list.",
+      "space": "Available space is required.",
+      "airline": "Please select an airline.",
+      "limit_title": "Limit Exceeded",
+      "limit_msg": "The maximum available space is {{limit}} {{unit}}.",
+      "generic_error": "Error",
+      "submit_error": "Could not {{action}} your trip. Please try again.",
+      "no_airline_found": "No airline found matching \"{{query}}\""
+    }
+  }
+  ,
+  "create_request": {
+    "title_edit": "Edit Request",
+    "title_direct": "Direct Request",
+    "title_new": "New Request",
+    "btn_save": "Save Changes",
+    "btn_send": "Send Request",
+    "btn_post": "Post Request",
+    "loading_trip": "Loading Trip Details...",
+    "direct_label": "Sending Direct Request to:",
+    "sections": {
+      "product": "Product",
+      "route": "Delivery Route",
+      "deadline": "Deadline",
+      "budget": "Budget & Reward",
+      "specs": "Specifications",
+      "category": "Category",
+      "notes": "Notes"
+    },
+    "labels": {
+      "upload_image": "Upload Product Image",
+      "product_name": "Product Name",
+      "product_placeholder": "e.g., iPhone 15 Pro",
+      "product_link": "Product Link (Optional)",
+      "link_placeholder": "https://...",
+      "origin": "From",
+      "destination": "To",
+      "city_placeholder": "City, Country",
+      "required_by": "Required By",
+      "item_price": "Item Price ($)",
+      "qty": "Qty",
+      "reward": "Traveler Reward ($)",
+      "reward_placeholder": "20.00",
+      "reward_helper": "This is what you pay the traveler for their service.",
+      "weight": "Approx. Weight (Optional)",
+      "weight_placeholder": "e.g. 200",
+      "notes_placeholder": "Size, color, handling instructions..."
+    },
+    "units": {
+      "kg": "Kg",
+      "gr": "Gr"
+    },
+    "errors": {
+      "product_name": "Product name is required.",
+      "item_price": "Item price is required.",
+      "reward": "Traveler fee is required.",
+      "origin": "Please select a valid origin city.",
+      "destination": "Please select a valid destination city.",
+      "generic_error": "Error",
+      "submit_error": "Could not {{action}} your request. Please try again.",
+      "upload_failed": "Upload Failed",
+      "invalid_file_type": "Invalid File Type",
+      "invalid_file_msg": "Only image files are allowed. Please select a valid image (JPEG, PNG, etc.).",
+      "file_too_large": "File Too Large",
+      "file_too_large_msg": "The image is too large ({{size}} MB). Maximum file size is 5MB. Please select a smaller image."
+    }
+  }
+  ,
+  "payment": {
+    "title": "Confirm and Pay",
+    "loading_error": "Error loading payment details.",
+    "delivery_partner": "Delivery Partner",
+    "verified_traveler": "Verified Traveler",
+    "payment_method": "Payment Method",
+    "order_summary": "Order Summary",
+    "delivery_fee": "Delivery Fee",
+    "total": "Total",
+    "security_notice": "Your payment is held securely until you confirm delivery.",
+    "pay_btn": "Pay ${{amount}}",
+    "success_title": "Payment Successful!",
+    "success_msg": "Your order is confirmed. Please share the code below with your traveler upon receiving your item.",
+    "delivery_code": "Your Delivery Code",
+    "view_order_btn": "View Order Details",
+    "alerts": {
+      "failed_title": "Payment Failed",
+      "failed_msg": "Could not process payment. Please try again."
+    }
+  }
+  ,
+  "offer": {
+    "loading_error": "Could not identify current user.",
+    "loading_data_error": "Offer data could not be loaded.",
+    "btn_go_back": "Go Back",
+    "status": {
+      "offer_sent": "Offer Sent",
+      "waiting_traveler": "Waiting for {{name}} to accept your offer to bring the item.",
+      "waiting_requester": "Waiting for {{name}} to accept your delivery fee proposal.",
+      "action_required": "Action Required",
+      "action_traveler": "{{name}} has sent an offer. Accept it to proceed to payment, or negotiate.",
+      "action_requester": "{{name}} has updated their request. Review the new fee.",
+      "offer_accepted": "Offer Accepted!",
+      "offer_accepted_desc": "Great! Now please proceed to payment to secure the deal and open the chat.",
+      "waiting_payment": "Waiting for Payment",
+      "waiting_payment_desc": "Offer accepted! Waiting for {{name}} to secure the payment. You will be notified once confirmed.",
+      "payment_secured": "Payment Secured",
+      "payment_secured_requester": "You can now chat with the traveler. Do NOT share the delivery code until you have the item in hand.",
+      "payment_secured_traveler": "Payment is held securely. Coordinate delivery details in the chat. Ask for the code upon delivery.",
+      "completed": "Order Completed",
+      "completed_desc": "The delivery was successful and funds have been released. Thank you for using PeykLink!",
+      "closed": "Offer Closed",
+      "closed_desc": "{{name}} {{status}} this offer."
+    },
+    "summary_title": "Request Summary",
+    "view_product": "View Product",
+    "qty": "Qty: {{count}}",
+    "wt": "Wt: {{weight}}",
+    "price": "Product Price",
+    "fee": "Traveler Fee",
+    "btn_proceed": "Proceed to Payment",
+    "btn_confirm": "Confirm Delivery",
+    "actions": {
+      "cancel": "Cancel",
+      "reject": "Reject",
+      "negotiate": "Negotiate",
+      "accept": "Accept"
+    },
+    "modals": {
+      "negotiate_title": "Propose a New Fee",
+      "btn_send_offer": "Send New Offer"
+    },
+    "alerts": {
+      "invalid_amount": "Invalid Amount",
+      "enter_valid_fee": "Please enter a valid fee.",
+      "error_title": "Error",
+      "send_offer_error": "Could not send the offer. Please try again.",
+      "accept_error": "Could not accept the offer.",
+      "reject_title": "Offer Rejected",
+      "reject_msg": "You have rejected this offer.",
+      "reject_error": "Could not reject the offer.",
+      "cancel_title": "Request Cancelled",
+      "cancel_msg": "You have cancelled this request.",
+      "cancel_error": "Could not cancel the request.",
+      "url_error": "Could not open this URL: {{url}}"
+    },
+    "delivery_code": {
+      "title": "Your Delivery Code",
+      "warning": "IMPORTANT: Only share this code with the traveler AFTER you have received and inspected your item."
+    },
+    "history": {
+      "chat": "Chat History",
+      "negotiation": "Negotiation History",
+      "now": "now",
+      "ago_m": "{{count}}m ago",
+      "ago_h": "{{count}}h ago"
+    },
+    "trip_details": {
+      "title": "Trip Details",
+      "origin": "Origin",
+      "destination": "Destination",
+      "traveler_label": "Traveler"
+    }
+  }
+  ,
+  "confirm_delivery": {
+    "title": "Confirm Delivery",
+    "delivering_item": "Delivering Item",
+    "verification_title": "Verification Required",
+    "verification_desc": "Please enter the 6-digit confirmation code provided by the requester.",
+    "attempts_remaining": "{{count}} attempts remaining",
+    "secure_notice": "Payments are released securely via escrow once code is verified.",
+    "alerts": {
+      "invalid_code_title": "Invalid Code",
+      "invalid_code_msg": "Please enter all 6 digits.",
+      "incorrect_code_title": "Incorrect Code",
+      "success_title": "Success! 🎉",
+      "success_msg": "Delivery confirmed. Funds have been released to your account.",
+      "btn_awesome": "Awesome!",
+      "error_title": "System Error",
+      "error_msg": "Something went wrong. Please try again."
+    }
+  }
+  ,
+  "trip_component": {
+    "delete_error": "Error deleting the trip",
+    "offer_error": "Error sending offer",
+    "modals": {
+      "delete": {
+        "title": "Confirm Deletion",
+        "text": "Are you sure you want to delete this trip? This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
+      },
+      "edit": {
+        "title": "Confirm Edit",
+        "text": "Are you sure you want to edit this trip? You will be taken to the editing screen.",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
+      }
+    },
+    "labels": {
+      "new": "New",
+      "origin": "Origin",
+      "destination": "Destination",
+      "traveler": "Traveler",
+      "request_delivery": "Request Delivery"
+    }
+  }
+  ,
+  "request_component": {
+    "delete_error": "Error deleting the request",
+    "no_matching_trip": "No Matching Trip",
+    "trip_needed_msg": "You need a trip from {{origin}} to {{dest}} to make an offer.",
+    "invalid_fee": "Invalid Fee",
+    "valid_amount_msg": "Please enter a valid amount.",
+    "offer_sent": "Offer sent successfully.",
+    "duplicate_offer_title": "You Already Have an Offer",
+    "duplicate_offer_msg": "You can view your existing offer in the inbox.",
+    "url_error": "Could not open this URL",
+    "labels": {
+      "new": "New",
+      "requesting_item": "Requesting Item",
+      "view_product": "View Product",
+      "qty": "Qty: {{count}}",
+      "wt": "Wt: {{weight}}",
+      "reward": "Reward",
+      "due": "Due",
+      "cost": "Cost",
+      "show_less": "Show Less",
+      "show_more": "Show More",
+      "checking_trips": "Checking Matching Trips...",
+      "make_offer": "Make Delivery Offer",
+      "propose_fee": "Propose a Fee",
+      "send_offer": "Send Offer"
+    },
+    "modals": {
+      "delete": {
+        "title": "Confirm Deletion",
+        "text": "Are you sure you want to delete this request? This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
+      },
+      "edit": {
+        "title": "Confirm Edit",
+        "text": "Are you sure you want to edit this request?",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
+      }
+    }
+  }
+}

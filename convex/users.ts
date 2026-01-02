@@ -28,8 +28,17 @@ export const createUser = mutation({
             bio: args.bio,
             imageURL: args.imageURL,
             rating: 0,
+            asTravelerRating : 0,
+            asRequesterRating: 0,
+            communicationRating: 0,
+            punctualityRating: 0,
+            itemConditionRating: 0,
             clerkId: args.clerkId,
             completedOrders: 0,
+            travelerCompletedOrders: 0,
+            requesterCompletedOrders: 0,
+            walletBalance: 0,
+            isVerified: false,
         })
     }
   
@@ -135,13 +144,27 @@ export const getUserStats = query({
         }
 
         const userCompletedOrders = user.completedOrders
+        const userAsTravelerCompletedOrders = user.travelerCompletedOrders
+        const userAsRequesterCompletedOrders = user.requesterCompletedOrders
         const userRating = user.rating
+        const userAsTravelerRating = user.asTravelerRating
+        const userAsRequesterRating = user.asRequesterRating
+        const userCommRating = user.communicationRating
+        const userPuncRating = user.punctualityRating
+        const userItemRating = user.itemConditionRating
         const userCreationTime = user._creationTime
 
         return {
             userCompletedOrders,
             userRating,
-            userCreationTime
+            userCreationTime,
+            userAsTravelerCompletedOrders,
+            userAsRequesterCompletedOrders,
+            userAsTravelerRating,
+            userAsRequesterRating,
+            userCommRating,
+            userPuncRating,
+            userItemRating,
         }
 
     }

@@ -7,59 +7,111 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
-import React, { useMemo, useState } from "react";
-import { FlatList, ListRenderItemInfo, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import * as Haptics from 'expo-haptics'; // ADDED: Haptics
+import React, { useCallback, useMemo, useState } from "react";
+import {
+    FlatList,
+    LayoutAnimation,
+    ListRenderItemInfo,
+    Platform,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity, // NEW: For smooth transitions
+    UIManager // NEW: For Android Animation support
+    ,
 
-// --- All Constants and Styles are in this file ---
+
+
+    View
+} from "react-native";
+
+// === TRANSLATION IMPORT ===
+import { useTranslation } from "react-i18next";
+
+// --- Colors ---
 const COLORS = {
-    primary: '#0A84FF',
+    primary: '#007AFF',
     white: '#FFFFFF',
-    black: '#000000',
+    black: '#1C1C1E',
     grey: '#8E8E93',
-    lightGrey: '#D1D1D6',
+    lightGrey: '#E5E5EA',
     background: '#F2F2F7',
     card: '#FFFFFF',
+    searchBg: '#E4E4E9',
+    // CHANGED: Removed yellow warning colors for cleaner look
+    reviewContainerBg: '#FFFFFF', 
+    reviewContainerBorder: '#E5E5EA',
+    textSecondary: '#6C6C70', 
 };
+
+// NEW: Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function InboxScreen() {
     const { signOut, userId } = useAuth();
+    // Initialize Translation
+    const { t } = useTranslation();
+
     const [searchQuery, setSearchQuery] = useState('');
+    const [refreshing, setRefreshing] = useState(false); // ADDED: Refresh state
+
     const currentUser = useQuery(api.users.getUserByClerkId, userId ? { clerkId: userId } : "skip")
     
-    
-    // FIX 1: Changed the types to match the backend arguments ('ByUser', 'ToUser').
+    // REDESIGN: Simplified tabs to just Direction (All, Sent, Received). 
+    // "Paid" and "Completed" are statuses, not inboxes, so they shouldn't be top-level tabs.
     const [activeTab, setActiveTab] = useState<'ByUser' | 'ToUser' | 'all'>('all');
 
-    // FIX 2: Replaced the three separate queries with one dynamic query.
-    // This single hook will automatically re-fetch data whenever 'activeTab' changes.
     const threads = useQuery(api.offers.getMyOfferThreads);
-
-    
     const notReviewedNegotiations = useQuery(api.reviews.getNotReviewedNegotiations)
-    
 
+    // --- Haptic Tab Switcher & Animation ---
+    const handleTabChange = (tab: 'ByUser' | 'ToUser' | 'all') => {
+        Haptics.selectionAsync(); // Trigger light haptic feedback
+        // NEW: Animate the list transition
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setActiveTab(tab);
+    };
 
-    // This hook efficiently filters the list only when the data or search query changes.
+    // --- Pull to Refresh Logic ---
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // Convex is real-time, so we just simulate a network check for UX
+        setTimeout(() => {
+            setRefreshing(false);
+        }, 1500);
+    }, []);
+
     const filteredThreads = useMemo(() => {
-        // Use the new 'threads' variable which holds the data for the active tab.
-        if (!threads) {
-            return [];
-        }
+        if (!threads) return [];
         
-        let threadsToDisplay = threads
+        let threadsToDisplay = threads;
 
-        if (activeTab === 'ByUser') {
-            threadsToDisplay = threads.filter(t => t.negotiation.creatorId === currentUser?._id)
-        } else if (activeTab == "ToUser") {
-            threadsToDisplay = threads.filter(t => t.negotiation.creatorId !== currentUser?._id)
+        // --- 1. Filter by Tab (Simplified) ---
+        switch (activeTab) {
+            case 'ByUser': // Sent by me
+                threadsToDisplay = threads.filter(t => t.negotiation.creatorId === currentUser?._id);
+                break;
+            case 'ToUser': // Received by me
+                threadsToDisplay = threads.filter(t => t.negotiation.creatorId !== currentUser?._id);
+                break;
+            case 'all':
+            default:
+                break;
         }
 
+        // --- 2. Filter by Search Query ---
         if (!searchQuery) {
             return threadsToDisplay;
         }
 
         return threadsToDisplay.filter(thread => {
             const query = searchQuery.toLowerCase();
+            // Added optional chaining just in case
             const usernameMatch = thread.otherUser.username?.toLowerCase().includes(query);
             const productMatch = thread.requestDetails.productName.toLowerCase().includes(query);
             return usernameMatch || productMatch;
@@ -70,60 +122,90 @@ export default function InboxScreen() {
         return <Loader />;
     }
 
-    type OfferThreadType = (typeof filteredThreads)[number];
-
     const renderOfferThread = ({ item }: ListRenderItemInfo<OfferThread>) => {
         return <OfferThreadItem thread={item} />;
     };
 
-    return (
-        <View style={styles.container}>
+    // --- Header Component for FlatList ---
+    // This allows the Review Prompt to scroll WITH the list, rather than sticking awkwardly on top.
+    const ListHeader = () => (
+        <View>
+            {/* NEW: Informative Status Bar */}
+            <View style={styles.statusBar}>
+                <Text style={styles.statusText}>
+                    {searchQuery 
+                        ? (filteredThreads.length === 1 
+                            ? t('inbox.status.found_result', { count: filteredThreads.length }) 
+                            : t('inbox.status.found_results', { count: filteredThreads.length }))
+                        : (filteredThreads.length === 1 
+                            ? t('inbox.status.showing_chat', { count: filteredThreads.length })
+                            : t('inbox.status.showing_chats', { count: filteredThreads.length }))
+                    }
+                </Text>
+            </View>
 
             {notReviewedNegotiations && notReviewedNegotiations.length > 0 && (
-                <ReviewPrompt negotiation={notReviewedNegotiations[0]} />
+                <View style={styles.reviewWrapper}>
+                    {/* CHANGED: Passed props correctly to the updated component */}
+                    <ReviewPrompt 
+                        negotiation={notReviewedNegotiations[0]} 
+                        travelerName={notReviewedNegotiations[0].travelerName}
+                        productName={notReviewedNegotiations[0].productName}
+                        productImageUrl={notReviewedNegotiations[0].productImageUrl}
+                        userAvatarUrl={notReviewedNegotiations[0].userAvatarUrl}
+                    />
+                </View>
             )}
+        </View>
+    );
 
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Inbox</Text>
-                <TouchableOpacity onPress={() => signOut()}>
-                    <Ionicons name="log-out-outline" size={26} color={COLORS.primary} />
-                </TouchableOpacity>
-            </View>
-            
-            {/* NEW: Tab container and buttons */}
-            <View style={styles.tabContainer}>
-                
-                <TouchableOpacity 
-                    style={[styles.tab, activeTab === 'ByUser' && styles.activeTab]} 
-                    onPress={() => setActiveTab('ByUser')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'ByUser' && styles.activeTabText]}>By Me</Text>
-                </TouchableOpacity>
+    return (
+        <View style={styles.container}>
+            <View style={styles.headerContainer}>
+                <View style={styles.headerTopRow}>
+                    <Text style={styles.headerTitle}>{t('inbox.title')}</Text>
+                    
+                    {/* REDESIGN: REMOVED Gear Icon as requested. */}
+                    {/* If you ever need to add an action here, use this space for a 'Mark all read' or similar */}
+                </View>
 
-                <TouchableOpacity 
-                    style={[styles.tab, activeTab === 'all' && styles.activeTab]} 
-                    onPress={() => setActiveTab('all')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>All</Text>
-                </TouchableOpacity>
+                <View style={styles.searchContainer}>
+                    <Ionicons name="search" size={20} color={COLORS.grey} style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder={t('inbox.search_placeholder')}
+                        placeholderTextColor={COLORS.grey}
+                        value={searchQuery}
+                        onChangeText={(text) => {
+                            // NEW: Animate search results filtering
+                            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                            setSearchQuery(text);
+                        }}
+                        clearButtonMode="while-editing"
+                    />
+                </View>
 
-                <TouchableOpacity 
-                    style={[styles.tab, activeTab === 'ToUser' && styles.activeTab]} 
-                    onPress={() => setActiveTab('ToUser')}
-                >
-                    <Text style={[styles.tabText, activeTab === 'ToUser' && styles.activeTabText]}>To Me</Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color={COLORS.grey} style={styles.searchIcon} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search by user or product..."
-                    placeholderTextColor={COLORS.grey}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                />
+                {/* REDESIGN: Simplified Tabs with Icons for better UX */}
+                <View style={styles.tabContainer}>
+                    <FilterPill 
+                        label={t('inbox.tabs.all')}
+                        icon="file-tray-full-outline" // Added Icon
+                        isActive={activeTab === 'all'} 
+                        onPress={() => handleTabChange('all')} 
+                    />
+                    <FilterPill 
+                        label={t('inbox.tabs.sent')}
+                        icon="paper-plane-outline" // Added Icon
+                        isActive={activeTab === 'ByUser'} 
+                        onPress={() => handleTabChange('ByUser')} 
+                    />
+                    <FilterPill 
+                        label={t('inbox.tabs.received')}
+                        icon="download-outline" // Added Icon
+                        isActive={activeTab === 'ToUser'} 
+                        onPress={() => handleTabChange('ToUser')} 
+                    />
+                </View>
             </View>
 
             <FlatList
@@ -132,125 +214,214 @@ export default function InboxScreen() {
                 keyExtractor={(item) => item.negotiation._id}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContainer}
-                ListEmptyComponent={<NoItemsFound hasSearch={searchQuery.length > 0} />}
+                ListHeaderComponent={ListHeader} // Moved ReviewPrompt here
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+                }
+                ListEmptyComponent={
+                    <NoItemsFound 
+                        hasSearch={searchQuery.length > 0} 
+                        activeTab={activeTab} 
+                        t={t}
+                    />
+                }
             />
         </View>
     );
 }
 
-const NoItemsFound = ({ hasSearch }: { hasSearch: boolean }) => (
-    <View style={styles.emptyContainer}>
+// --- Sub-components ---
+
+// UPDATED: FilterPill now accepts an icon for better visual cues
+const FilterPill = ({ label, icon, isActive, onPress }: { label: string, icon: keyof typeof Ionicons.glyphMap, isActive: boolean, onPress: () => void }) => (
+    <TouchableOpacity 
+        style={[styles.filterPill, isActive && styles.filterPillActive]} 
+        onPress={onPress}
+        activeOpacity={0.7}
+    >
         <Ionicons 
-            name={hasSearch ? "search-circle-outline" : "chatbubbles-outline"} 
-            size={80} 
-            color={COLORS.lightGrey} 
+            name={icon} 
+            size={14} 
+            color={isActive ? COLORS.white : COLORS.grey} 
+            style={{ marginRight: 6 }}
         />
-        <Text style={styles.emptyText}>
-            {hasSearch ? "No Results Found" : "Your Inbox is Empty"}
+        <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
+            {label}
         </Text>
-        <Text style={styles.emptySubtext}>
-            {hasSearch ? "Try searching for something else." : "New offers from travelers will appear here."}
-        </Text>
-    </View>
+    </TouchableOpacity>
 );
 
-// --- All Styles are defined below ---
+const NoItemsFound = ({ hasSearch, activeTab, t }: { hasSearch: boolean, activeTab: string, t: any }) => {
+    let message = t('inbox.empty.no_messages');
+    let subMessage = t('inbox.empty.no_new_negotiations');
+
+    if (hasSearch) {
+        message = t('inbox.empty.no_results');
+        subMessage = t('inbox.empty.adjust_search');
+    } else if (activeTab === 'ByUser') {
+        message = t('inbox.empty.no_sent');
+        subMessage = t('inbox.empty.no_sent_desc');
+    } else if (activeTab === 'ToUser') {
+        message = t('inbox.empty.no_received');
+        subMessage = t('inbox.empty.no_received_desc');
+    }
+
+    return (
+        <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconCircle}>
+                <Ionicons 
+                    name={hasSearch ? "search" : "chatbubble-ellipses-outline"} 
+                    size={48} 
+                    color={COLORS.primary} 
+                />
+            </View>
+            <Text style={styles.emptyText}>{message}</Text>
+            <Text style={styles.emptySubtext}>{subMessage}</Text>
+        </View>
+    );
+};
+
+// --- Styles ---
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.background,
     },
-    header: {
+    // Header
+    headerContainer: {
+        backgroundColor: COLORS.card,
+        paddingTop: Platform.OS === 'android' ? 12 : 12,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.lightGrey,
+        // NEW: Subtle shadow for depth
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
+        zIndex: 10,
+    },
+    headerTopRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: Platform.OS === 'android' ? 12 : 24,
-        paddingBottom: 10,
-        backgroundColor: COLORS.card,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: COLORS.lightGrey,
+        marginBottom: 16,
     },
     headerTitle: {
         fontSize: 34,
-        fontWeight: 'bold',
+        fontWeight: '800',
         color: COLORS.black,
+        letterSpacing: -0.5,
     },
-    // REPLACED: Modern Segmented Control Styles
-    tabContainer: {
-        flexDirection: 'row',
-        backgroundColor: '#EFEFF4',
-        borderRadius: 10,
-        marginHorizontal: 16,
-        marginTop: 10,
-        padding: 4,
-        justifyContent: 'space-between',
-    },
-    tab: {
-        flex: 1,
-        paddingVertical: 8,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    activeTab: {
-        backgroundColor: COLORS.white,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    tabText: {
-        color: COLORS.grey,
-        fontWeight: '600',
-        fontSize: 15,
-    },
-    activeTabText: {
-        color: COLORS.primary,
-    },
+    // Search
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.card,
-        borderRadius: 10,
+        backgroundColor: COLORS.searchBg,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 40,
         marginHorizontal: 16,
-        marginTop: 10,
-        paddingHorizontal: 10,
+        marginBottom: 16,
     },
     searchIcon: {
         marginRight: 8,
     },
     searchInput: {
         flex: 1,
-        height: 44,
-        fontSize: 17,
+        height: '100%',
+        fontSize: 16,
         color: COLORS.black,
+    },
+    // Filter Tabs
+    tabContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        gap: 10,
+    },
+    filterPill: {
+        flexDirection: 'row', // NEW: For Icon + Text
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: COLORS.background,
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    filterPillActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    filterPillText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.grey,
+    },
+    filterPillTextActive: {
+        color: COLORS.white,
+    },
+    // NEW: Status Bar Styles
+    statusBar: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    statusText: {
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        fontWeight: '500',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    // Review Prompt Wrapper
+    reviewWrapper: {
+        marginHorizontal: 16,
+        marginBottom: 8,
+        // CHANGED: Removed yellow warning style for a cleaner card look that matches ReviewPrompt
+        backgroundColor: COLORS.reviewContainerBg,
+        borderRadius: 20, // Matches ReviewPrompt radius
+        borderWidth: 1,
+        borderColor: COLORS.reviewContainerBorder,
+        // Added shadow to match cards
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 2,
+        overflow: 'hidden',
     },
     listContainer: {
-        paddingTop: 16,
-        paddingBottom: 60,
+        paddingBottom: 100, 
     },
+    // Empty State
     emptyContainer: {
         flex: 1,
-        height: 500,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        paddingHorizontal: 32,
+        marginTop: 80,
+    },
+    emptyIconCircle: { // NEW: Circle bg for icon
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#E5F1FF', // Light blue
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
     },
     emptyText: {
-        fontSize: 22,
-        fontWeight: 'bold',
+        fontSize: 20,
+        fontWeight: '700',
         color: COLORS.black,
-        marginTop: 16,
+        marginBottom: 8,
     },
     emptySubtext: {
-        fontSize: 16,
+        fontSize: 15,
         color: COLORS.grey,
-        marginTop: 8,
         textAlign: 'center',
+        lineHeight: 22,
     },
 });

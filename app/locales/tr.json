@@ -1,0 +1,430 @@
+{
+  "welcome_back": "Tekrar hoşgeldiniz,",
+  "where_to": "Nereye?",
+  "filter_route": "Rotayı Filtrele",
+  "clear": "Temizle",
+  "origin_city": "Kalkış Şehri",
+  "destination_city": "Varış Şehri",
+  "filter_categories": "Kategorileri Filtrele",
+  "filtered": "Filtrelendi",
+  "trips": "Yolculuklar",
+  "requests": "İstekler",
+  "no_items_found": "{{type}} bulunamadı",
+  "no_items_subtitle": "Aramanızla eşleşen aktif {{type}} yok.\nFiltrelerinizi değiştirmeyi deneyin.",
+  "categories": {
+    "Electronics": "Elektronik",
+    "Clothing": "Giyim",
+    "Documents": "Belgeler",
+    "Books": "Kitaplar",
+    "Cosmetics": "Kozmetik",
+    "Pets": "Evcil Hayvanlar",
+    "Cigars": "Puro",
+    "Medication": "İlaç"
+  },
+  "create_new": "Yeni Oluştur",
+  "connect_prompt": "Bugün nasıl bağlantı kurmak istersiniz?",
+  "post_trip": "Seyahat Paylaş",
+  "post_trip_desc": "Yakında seyahat mi ediyorsunuz? Ürün getirerek masraflarınızı çıkarın.",
+  "earn_money": "Para Kazan",
+  "meet_locals": "Yerlilerle Tanış",
+  "make_request": "İstek Yap",
+  "make_request_desc": "Yerel olarak bulamıyor musunuz? Dünyanın her yerinden ürün getirtin.",
+  "shop_global": "Küresel Alışveriş",
+  "secure_escrow": "Güvenli Emanet Hesabı",
+  "footer_trust": "Güvenli Ödemeler • Doğrulanmış Gezginler",
+  "explore": {
+    "title": "Keşfet",
+    "subtitle": "Seyahatlerini kazanca dönüştür.",
+    "network": "AĞINIZ",
+    "matched_travelers": "Eşleşen Gezginler",
+    "open_requests": "Açık İstekler",
+    "incoming_travelers": "Gelen Gezginler",
+    "incoming_desc": "Şehrinize uçan insanlar.",
+    "delivery_jobs": "Teslimat Görevleri",
+    "delivery_desc": "Yolculuklarınızda ürün teslim ederek para kazanın.",
+    "potential_earnings": "POTANSİYEL KAZANÇ"
+  },
+  "cards": {
+    "requesting_item": "Ürün İstiyor",
+    "due_date": "Bitiş {{date}}",
+    "item_price": "Ürün Fiyatı:",
+    "reward": "ÖDÜL",
+    "total_cost": "TOPLAM",
+    "make_offer": "Teklif Ver",
+    "available": "Müsait",
+    "for_requests": "İstek Alabilir",
+    "request_delivery": "Teslimat İste",
+    "traveler_default": "Gezgin"
+  },
+  "empty_states": {
+    "no_incoming": "Gelen Gezgin Yok",
+    "scanning_network": "Konumunuzla eşleşen yolculuklar için ağ taranıyor.",
+    "create_request": "İstek Oluştur",
+    "no_jobs": "Teslimat Görevi Yok",
+    "unlock_earnings": "Teslimat isteklerini görmek ve para kazanmak için yaklaşan seyahatinizi ekleyin.",
+    "create_trip": "Seyahat Ekle"
+  },
+  "alerts": {
+    "no_matching_trip": "Eşleşen Seyahat Yok",
+    "need_trip_msg": "Teklif vermek için {{origin}} - {{dest}} arası bir seyahatiniz olmalı.",
+    "invalid_fee": "Geçersiz Ücret",
+    "enter_valid_amount": "Lütfen geçerli bir tutar girin.",
+    "offer_exists": "Teklif Mevcut",
+    "offer_exists_msg": "Bu ürün için zaten bir teklif verdiniz.",
+    "error": "Hata",
+    "send_offer_error": "Teklif gönderilemedi."
+  },
+  "modals": {
+    "make_offer_title": "Teklif Yap",
+    "make_offer_subtitle": "Bunu teslim ederek ne kadar kazanmak istersiniz?",
+    "send_offer_btn": "Teklifi Gönder"
+  },
+  "profile": {
+    "title": "Profil",
+    "joined": "Katılım {{date}}",
+    "edit_profile": "Profili Düzenle",
+    "tabs": {
+      "traveler": "Gezgin",
+      "shopper": "Alışverişçi"
+    },
+    "stats": {
+      "deliveries": "Teslimatlar",
+      "orders": "Siparişler",
+      "rating": "Puan",
+      "reliability": "Güvenilirlik",
+      "new": "Yeni"
+    },
+    "filter": {
+      "active": "Aktif",
+      "history": "Geçmiş",
+      "reviews": "Yorumlar"
+    },
+    "subtitle": {
+      "reviews": "{{role}} olarak {{count}} yorum",
+      "items": "{{count}} {{status}} öğe bulundu"
+    },
+    "toast": {
+      "username_copied": "Kullanıcı Adı Kopyalandı"
+    },
+    "share_msg": "GrabrApp'te {{name}} adlı kullanıcının profiline göz at!",
+    "modals": {
+      "edit": {
+        "title": "Profili Düzenle",
+        "fullname_label": "Tam Ad",
+        "fullname_placeholder": "Adınız",
+        "bio_label": "Biyografi",
+        "bio_placeholder": "Bize kendinizden bahsedin...",
+        "save_btn": "Değişiklikleri Kaydet"
+      },
+      "wallet": {
+        "title": "İşlem Geçmişi",
+        "empty_title": "Henüz işlem yok",
+        "empty_desc": "Bir teslimatı tamamladığınızda veya para çektiğinizde geçmişiniz burada görünecektir.",
+        "fund_btn": "Cüzdana Para Yükle (Yakında)"
+      }
+    },
+    "empty": {
+      "no_reviews": "Henüz Yorum Yok",
+      "no_active": "Aktif Öğe Yok",
+      "archive_empty": "Arşiv Boş",
+      "desc_reviews": "Henüz topluluktan herhangi bir geri bildirim almadınız.",
+      "desc_active": "Şu anda aktif {{type}} bulunmuyor.",
+      "desc_archive": "Tamamlanan veya arşivlenen öğeleriniz burada görünecektir."
+    }
+  },
+  "inbox": {
+    "title": "Gelen Kutusu",
+    "search_placeholder": "Ürün veya kullanıcı ara...",
+    "tabs": {
+      "all": "Tümü",
+      "sent": "Gönderilen",
+      "received": "Gelen"
+    },
+    "status": {
+      "found_result": "{{count}} sonuç bulundu",
+      "found_results": "{{count}} sonuç bulundu",
+      "showing_chat": "{{count}} aktif sohbet gösteriliyor",
+      "showing_chats": "{{count}} aktif sohbet gösteriliyor"
+    },
+    "empty": {
+      "no_messages": "Mesaj yok",
+      "no_new_negotiations": "Yeni görüşmeler burada görünecek.",
+      "no_results": "Sonuç bulunamadı",
+      "adjust_search": "Arama terimlerinizi değiştirmeyi deneyin.",
+      "no_sent": "Gönderilen Teklif Yok",
+      "no_sent_desc": "Gezginlere/alışverişçilere yaptığınız teklifler burada görünecek.",
+      "no_received": "Gelen Teklif Yok",
+      "no_received_desc": "Başkalarından aldığınız teklifler burada görünecek."
+    }
+  },
+  "create_trip": {
+    "title_edit": "Seyahati Düzenle",
+    "title_plan": "Seyahat Planla",
+    "btn_save": "Değişiklikleri Kaydet",
+    "btn_post": "Seyahati Yayınla",
+    "sections": {
+      "route": "Rota",
+      "details": "Detaylar",
+      "capacity": "Kapasite",
+      "allowed_items": "İzin Verilen Eşyalar"
+    },
+    "labels": {
+      "origin": "Kalkış",
+      "destination": "Varış",
+      "city_placeholder": "Şehir, Ülke",
+      "arrival_date": "Varış Tarihi",
+      "airline": "Havayolu",
+      "select_airline": "Havayolu Seç",
+      "search_airline_placeholder": "Ara örn. THY"
+    },
+    "units": {
+      "kg": "Kg",
+      "gr": "Gr"
+    },
+    "info_warning": "Özel eşyalar için havayolu düzenlemelerini kontrol etmek sizin sorumluluğunuzdadır.",
+    "errors": {
+      "origin": "Lütfen listeden geçerli bir kalkış şehri seçin.",
+      "destination": "Lütfen listeden geçerli bir varış şehri seçin.",
+      "space": "Müsait alan gereklidir.",
+      "airline": "Lütfen bir havayolu seçin.",
+      "limit_title": "Limit Aşıldı",
+      "limit_msg": "Maksimum müsait alan {{limit}} {{unit}}.",
+      "generic_error": "Hata",
+      "submit_error": "Seyahatiniz {{action}} işlemi yapılamadı. Lütfen tekrar deneyin.",
+      "no_airline_found": "\"{{query}}\" ile eşleşen havayolu bulunamadı"
+    }
+  },
+  "create_request": {
+    "title_edit": "İsteği Düzenle",
+    "title_direct": "Doğrudan İstek",
+    "title_new": "Yeni İstek",
+    "btn_save": "Değişiklikleri Kaydet",
+    "btn_send": "İsteği Gönder",
+    "btn_post": "İsteği Yayınla",
+    "loading_trip": "Seyahat Detayları Yükleniyor...",
+    "direct_label": "Doğrudan İstek Gönderilen Kişi:",
+    "sections": {
+      "product": "Ürün",
+      "route": "Teslimat Rotası",
+      "deadline": "Son Tarih",
+      "budget": "Bütçe ve Ödül",
+      "specs": "Özellikler",
+      "category": "Kategori",
+      "notes": "Notlar"
+    },
+    "labels": {
+      "upload_image": "Ürün Görseli Yükle",
+      "product_name": "Ürün Adı",
+      "product_placeholder": "örn. iPhone 15 Pro",
+      "product_link": "Ürün Linki (İsteğe Bağlı)",
+      "link_placeholder": "https://...",
+      "origin": "Nereden",
+      "destination": "Nereye",
+      "city_placeholder": "Şehir, Ülke",
+      "required_by": "Gereken Tarih",
+      "item_price": "Ürün Fiyatı ($)",
+      "qty": "Adet",
+      "reward": "Gezgin Ödülü ($)",
+      "reward_placeholder": "20.00",
+      "reward_helper": "Bu, hizmeti karşılığında gezgine ödediğiniz tutardır.",
+      "weight": "Yaklaşık Ağırlık (İsteğe Bağlı)",
+      "weight_placeholder": "örn. 200",
+      "notes_placeholder": "Boyut, renk, taşıma talimatları..."
+    },
+    "units": {
+      "kg": "Kg",
+      "gr": "Gr"
+    },
+    "errors": {
+      "product_name": "Ürün adı gereklidir.",
+      "item_price": "Ürün fiyatı gereklidir.",
+      "reward": "Gezgin ücreti gereklidir.",
+      "origin": "Lütfen geçerli bir kalkış şehri seçin.",
+      "destination": "Lütfen geçerli bir varış şehri seçin.",
+      "generic_error": "Hata",
+      "submit_error": "İsteğiniz {{action}} işlemi yapılamadı. Lütfen tekrar deneyin.",
+      "upload_failed": "Yükleme Başarısız",
+      "invalid_file_type": "Geçersiz Dosya Türü",
+      "invalid_file_msg": "Sadece görsel dosyalarına izin verilir. Lütfen geçerli bir görsel seçin (JPEG, PNG vb.).",
+      "file_too_large": "Dosya Çok Büyük",
+      "file_too_large_msg": "Görsel çok büyük ({{size}} MB). Maksimum dosya boyutu 5MB'dır. Lütfen daha küçük bir görsel seçin."
+    }
+  },
+  "payment": {
+    "title": "Onayla ve Öde",
+    "loading_error": "Ödeme detayları yüklenirken hata oluştu.",
+    "delivery_partner": "Teslimat Ortağı",
+    "verified_traveler": "Doğrulanmış Gezgin",
+    "payment_method": "Ödeme Yöntemi",
+    "order_summary": "Sipariş Özeti",
+    "delivery_fee": "Teslimat Ücreti",
+    "total": "Toplam",
+    "security_notice": "Ödemeniz, siz teslimatı onaylayana kadar güvenle tutulur.",
+    "pay_btn": "${{amount}} Öde",
+    "success_title": "Ödeme Başarılı!",
+    "success_msg": "Siparişiniz onaylandı. Lütfen ürünü teslim aldığınızda aşağıdaki kodu gezginle paylaşın.",
+    "delivery_code": "Teslimat Kodunuz",
+    "view_order_btn": "Sipariş Detaylarını Gör",
+    "alerts": {
+      "failed_title": "Ödeme Başarısız",
+      "failed_msg": "Ödeme işlenemedi. Lütfen tekrar deneyin."
+    }
+  },
+  "offer": {
+    "loading_error": "Mevcut kullanıcı kimliği belirlenemedi.",
+    "loading_data_error": "Teklif verileri yüklenemedi.",
+    "btn_go_back": "Geri Dön",
+    "status": {
+      "offer_sent": "Teklif Gönderildi",
+      "waiting_traveler": "Ürünü getirmek için {{name}} kullanıcısının teklifinizi kabul etmesi bekleniyor.",
+      "waiting_requester": "{{name}} kullanıcısının teslimat ücreti teklifinizi kabul etmesi bekleniyor.",
+      "action_required": "İşlem Gerekiyor",
+      "action_traveler": "{{name}} bir teklif gönderdi. Ödemeye geçmek için kabul edin veya pazarlık yapın.",
+      "action_requester": "{{name}} isteğini güncelledi. Yeni ücreti inceleyin.",
+      "offer_accepted": "Teklif Kabul Edildi!",
+      "offer_accepted_desc": "Harika! Şimdi anlaşmayı güvence altına almak ve sohbeti başlatmak için lütfen ödemeye geçin.",
+      "waiting_payment": "Ödeme Bekleniyor",
+      "waiting_payment_desc": "Teklif kabul edildi! {{name}} kullanıcısının ödemeyi gerçekleştirmesi bekleniyor. Onaylandığında size bildirilecek.",
+      "payment_secured": "Ödeme Güvence Altında",
+      "payment_secured_requester": "Artık gezginle sohbet edebilirsiniz. Ürünü elinize alana kadar teslimat kodunu KESİNLİKLE paylaşmayın.",
+      "payment_secured_traveler": "Ödeme güvenli bir şekilde tutuluyor. Sohbet üzerinden teslimat detaylarını konuşun. Teslimat sırasında kodu isteyin.",
+      "completed": "Sipariş Tamamlandı",
+      "completed_desc": "Teslimat başarılı oldu ve ödeme serbest bırakıldı. PeykLink'i kullandığınız için teşekkürler!",
+      "closed": "Teklif Kapandı",
+      "closed_desc": "{{name}} bu teklifi {{status}}."
+    },
+    "summary_title": "İstek Özeti",
+    "view_product": "Ürünü Gör",
+    "qty": "Adet: {{count}}",
+    "wt": "Ağ: {{weight}}",
+    "price": "Ürün Fiyatı",
+    "fee": "Gezgin Ücreti",
+    "btn_proceed": "Ödemeye Geç",
+    "btn_confirm": "Teslimatı Onayla",
+    "actions": {
+      "cancel": "İptal Et",
+      "reject": "Reddet",
+      "negotiate": "Pazarlık Yap",
+      "accept": "Kabul Et"
+    },
+    "modals": {
+      "negotiate_title": "Yeni Bir Ücret Öner",
+      "btn_send_offer": "Yeni Teklif Gönder"
+    },
+    "alerts": {
+      "invalid_amount": "Geçersiz Tutar",
+      "enter_valid_fee": "Lütfen geçerli bir ücret girin.",
+      "error_title": "Hata",
+      "send_offer_error": "Teklif gönderilemedi. Lütfen tekrar deneyin.",
+      "accept_error": "Teklif kabul edilemedi.",
+      "reject_title": "Teklif Reddedildi",
+      "reject_msg": "Bu teklifi reddettiniz.",
+      "reject_error": "Teklif reddedilemedi.",
+      "cancel_title": "İstek İptal Edildi",
+      "cancel_msg": "Bu isteği iptal ettiniz.",
+      "cancel_error": "İstek iptal edilemedi.",
+      "url_error": "Bu URL açılamadı: {{url}}"
+    },
+    "delivery_code": {
+      "title": "Teslimat Kodunuz",
+      "warning": "ÖNEMLİ: Bu kodu YALNIZCA ürünü teslim alıp inceledikten SONRA gezginle paylaşın."
+    },
+    "history": {
+      "chat": "Sohbet Geçmişi",
+      "negotiation": "Pazarlık Geçmişi",
+      "now": "şimdi",
+      "ago_m": "{{count}}dk önce",
+      "ago_h": "{{count}}sa önce"
+    },
+    "trip_details": {
+      "title": "Seyahat Detayları",
+      "origin": "Kalkış",
+      "destination": "Varış",
+      "traveler_label": "Gezgin"
+    }
+  },
+  "confirm_delivery": {
+    "title": "Teslimatı Onayla",
+    "delivering_item": "Teslim Edilen Ürün",
+    "verification_title": "Doğrulama Gerekli",
+    "verification_desc": "Lütfen istek sahibi tarafından verilen 6 haneli onay kodunu girin.",
+    "attempts_remaining": "{{count}} deneme hakkı kaldı",
+    "secure_notice": "Kod doğrulandıktan sonra ödemeler emanet hesabından güvenli bir şekilde serbest bırakılır.",
+    "alerts": {
+      "invalid_code_title": "Geçersiz Kod",
+      "invalid_code_msg": "Lütfen 6 hanenin tamamını girin.",
+      "incorrect_code_title": "Hatalı Kod",
+      "success_title": "Başarılı! 🎉",
+      "success_msg": "Teslimat onaylandı. Ödeme hesabınıza aktarıldı.",
+      "btn_awesome": "Harika!",
+      "error_title": "Sistem Hatası",
+      "error_msg": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+    }
+  },
+  "trip_component": {
+    "delete_error": "Seyahat silinirken hata oluştu",
+    "offer_error": "Teklif gönderilirken hata oluştu",
+    "modals": {
+      "delete": {
+        "title": "Silme İşlemini Onayla",
+        "text": "Bu seyahati silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "cancel": "İptal",
+        "confirm": "Onayla"
+      },
+      "edit": {
+        "title": "Düzenlemeyi Onayla",
+        "text": "Bu seyahati düzenlemek istediğinizden emin misiniz? Düzenleme ekranına yönlendirileceksiniz.",
+        "cancel": "İptal",
+        "confirm": "Onayla"
+      }
+    },
+    "labels": {
+      "new": "Yeni",
+      "origin": "Kalkış",
+      "destination": "Varış",
+      "traveler": "Gezgin",
+      "request_delivery": "Teslimat İste"
+    }
+  },
+  "request_component": {
+    "delete_error": "İstek silinirken hata oluştu",
+    "no_matching_trip": "Eşleşen Seyahat Yok",
+    "trip_needed_msg": "Teklif vermek için {{origin}} - {{dest}} arası bir seyahatiniz olmalı.",
+    "invalid_fee": "Geçersiz Ücret",
+    "valid_amount_msg": "Lütfen geçerli bir tutar girin.",
+    "offer_sent": "Teklif başarıyla gönderildi.",
+    "duplicate_offer_title": "Zaten Bir Teklifiniz Var",
+    "duplicate_offer_msg": "Mevcut teklifinizi gelen kutusunda görebilirsiniz.",
+    "url_error": "Bu URL açılamadı",
+    "labels": {
+      "new": "Yeni",
+      "requesting_item": "Ürün İstiyor",
+      "view_product": "Ürünü Gör",
+      "qty": "Adet: {{count}}",
+      "wt": "Ağ: {{weight}}",
+      "reward": "Ödül",
+      "due": "Bitiş",
+      "cost": "Maliyet",
+      "show_less": "Daha Az Göster",
+      "show_more": "Daha Fazla Göster",
+      "checking_trips": "Eşleşen Seyahatler Kontrol Ediliyor...",
+      "make_offer": "Teslimat Teklifi Yap",
+      "propose_fee": "Ücret Öner",
+      "send_offer": "Teklif Gönder"
+    },
+    "modals": {
+      "delete": {
+        "title": "Silme İşlemini Onayla",
+        "text": "Bu isteği silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "cancel": "İptal",
+        "confirm": "Onayla"
+      },
+      "edit": {
+        "title": "Düzenlemeyi Onayla",
+        "text": "Bu isteği düzenlemek istediğinizden emin misiniz?",
+        "cancel": "İptal",
+        "confirm": "Onayla"
+      }
+    }
+  }
+}

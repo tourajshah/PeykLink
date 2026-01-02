@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.ts2o3iu5hnb2.peyklink"
     },
     "web": {
       "bundler": "metro",
@@ -34,10 +35,18 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1328691e-4744-40ee-815f-778df11212a1"
+      }
+    },
+    "owner": "ts2o3iu5hnb2"
   }
 }

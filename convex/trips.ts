@@ -81,10 +81,11 @@ export const getFeedTrips = query ({
                     destinationCountryCode: destinationCityInfo?.countryCode ?? '', // fallback
 
                     traveler:{
-                        _id:tripCreator?._id,
-                        username: tripCreator?.username,
+                        _id:tripCreator._id,
+                        username: tripCreator.username,
                         image: tripCreator?.imageURL,
-                        rating: tripCreator.rating
+                        rating: tripCreator?.rating,
+                        asTravelerrating: tripCreator?.asTravelerRating
                     },
 
                 }
@@ -121,8 +122,10 @@ export const deleteTrip = mutation({
 
 
 export const getMyTrips = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    statuses: v.optional(v.array(v.string()))
+  },
+  handler: async (ctx, args) => {
     const currentUser = await getAuthenticatedUser(ctx);
 
     // If there's no authenticated user, there are no trips to return.
@@ -131,16 +134,25 @@ export const getMyTrips = query({
     }
 
     // 1. Fetch the raw trip documents created by the current user.
-    const userTrips = await ctx.db
+    let tripsQuery = ctx.db
       .query("trips")
-      // Your trips table likely uses 'travelerId' to reference the user document _id
-      .filter((q) => q.eq(q.field("travelerId"), currentUser._id))
-      .order("desc")
-      .collect();
+      .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id));
+      
+    if (args.statuses && args.statuses.length > 0) {
+
+      const statusToFilter = args.statuses;
+      
+      tripsQuery = tripsQuery.filter((q) => 
+        q.or(
+          ...statusToFilter.map(status => q.eq(q.field("status"), status))
+        )
+      );
+    }
+
+    const userTrips = await tripsQuery.order("desc").collect();
 
     // 2. Shape the data to match what the <Trip> component expects.
     const myTripsWithInfo = userTrips.map((trip) => {
-      // Find the country codes from your constant data.
       const originCityInfo = cityData.find(c => c.name === trip.originCity && c.country === trip.originCountry);
       const destinationCityInfo = cityData.find(c => c.name === trip.destinationCity && c.country === trip.destinationCountry);
 
@@ -149,12 +161,10 @@ export const getMyTrips = query({
         ...trip,
         originCountryCode: originCityInfo?.countryCode ?? '',
         destinationCountryCode: destinationCityInfo?.countryCode ?? '',
-        // Attach the traveler object directly, as we already have the user's data.
         traveler: {
           _id: currentUser._id,
           username: currentUser.username,
           image: currentUser.imageURL,
-          rating: currentUser.rating
         },
       };
     });
@@ -256,98 +266,82 @@ export const getMyMatchingTrips = query({
     }
 })
 
-
-export const getRecommendedRequests = query({
-    args: {},
-    handler: async (ctx) => {
-        const currentUser = await getAuthenticatedUser(ctx);
-        if (!currentUser) {
-            return []
-        }
-
-        const userTrips = await ctx.db 
-          .query("trips")
-          .withIndex("by_travelerId", (q) => q.eq("travelerId", currentUser._id))
-          .order('desc')
-          .collect();
-
-        const userTripsRoute = userTrips.flatMap((trip) => {
-
-          const origin = cityData.find(c => c.name === trip.originCity && c.country === trip.originCountry)
-          const destination = cityData.find(c => c.name === trip.destinationCity && c.country === trip.destinationCountry)
-          if (!origin || !destination) {
-            return []
-          }
-          const originCity = origin.name
-          const originCountry = origin.country
-          const originCountryCode = origin.countryCode
-          const destinationCity = destination.name
-          const destinationCountry = destination.country
-          const destinationCountryCode = destination.countryCode
-
-          return {
-            origin,destination,
-            originCity,originCountry,originCountryCode,
-            destinationCity,destinationCountry,destinationCountryCode
-            
-          }
-        })
-
-        const userOriginCities = userTripsRoute.map((trip) => trip.originCity)
-        const userDestinationCities = userTripsRoute.map((trip) => trip.destinationCity)
-
-        const allRequests = await ctx.db.query("requests")
-          .filter((q) => 
-          q.and(
-            q.neq(q.field("requesterId"), currentUser._id),
-            q.eq(q.field("visibility"), "public")
-            ))
-          .collect()
-
-        const matchingRequests = allRequests.filter((request) =>
-          userOriginCities.includes(request.originCity) &&
-          userDestinationCities.includes(request.destinationCity)
-        )
-
-        if(matchingRequests.length === 0) return []
-
-        const matchingRequestsWithInfo = await Promise.all(
-            
-          matchingRequests.map(async(request) => {
-
-              const requestCreator = (await ctx.db.get(request.requesterId))
-
-              if (!requestCreator) {
-                return null
-              }
-
-              const originCityInfo = cityData.find(c => c.name === request.originCity && c.country === request.originCountry);
-              const destinationCityInfo = cityData.find(c => c.name === request.destinationCity && c.country === request.destinationCountry);
-
-              return {
-                  ...request,
-
-                  originCountryCode: originCityInfo?.countryCode ?? '', // fallback
-                  destinationCountryCode: destinationCityInfo?.countryCode ?? '', // fallback
-
-                  requester:{
-                      _id:requestCreator?._id as string,
-                      username: requestCreator?.username,
-                      image: requestCreator?.imageURL
-                  },
-
-              }
-
-          })
-
-        )
-
-        return matchingRequestsWithInfo.filter((request): request is NonNullable<typeof request> => request !== null)     
+export const getRecommendedTrips = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthenticatedUser(ctx);
+    if (!currentUser) {
+      return [];
     }
 
-})
+    // 1. Get the Current User's Active Requests (The "Demand")
+    const myRequests = await ctx.db
+      .query("requests")
+      .withIndex("by_requesterId", (q) => q.eq("requesterId", currentUser._id))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    if (myRequests.length === 0) return [];
+
+    // 2. Extract unique routes from the user's requests
+    // We want trips that go FROM the Item Origin TO the User's Location
+    const neededRoutes = myRequests.map((r) => ({
+      origin: r.originCity,
+      destination: r.destinationCity,
+    }));
+
+    const neededOrigins = neededRoutes.map((r) => r.origin);
+    const neededDestinations = neededRoutes.map((r) => r.destination);
+
+    // 3. Get All Active Trips (The "Supply")
+    // We filter out the user's own trips and non-pending trips
+    const allTrips = await ctx.db
+      .query("trips")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+
+    // 4. Perform the Match in Memory
+    const matchingTrips = allTrips.filter((trip) => {
+      // Don't show my own trips
+      if (trip.travelerId === currentUser._id) return false;
+
+      // Check if this trip matches ANY of my request routes
+      return (
+        neededOrigins.includes(trip.originCity) &&
+        neededDestinations.includes(trip.destinationCity)
+      );
+    });
+
+    if (matchingTrips.length === 0) return [];
+
+    // 5. Hydrate with Traveler Info (Join)
+    const matchingTripsWithInfo = await Promise.all(
+      matchingTrips.map(async (trip) => {
+        const traveler = await ctx.db.get(trip.travelerId);
+        if (!traveler) return null;
+
+        const originCityInfo = cityData.find(c => c.name === trip.originCity && c.country === trip.originCountry && c.countryCode);
+        const destinationCityInfo = cityData.find(c => c.name === trip.destinationCity && c.country === trip.destinationCountry);
 
 
+        return {
+          ...trip,
+          traveler: {
+            _id: traveler._id,
+            username: traveler.username,
+            image: traveler.imageURL,
+            rating: traveler.rating, // Assuming this exists on user object
+          },
+          // Ensure we pass these through for your Trip Component
+          originCountryCode: originCityInfo?.countryCode || "", // Fallback if not in DB
+          destinationCountryCode: destinationCityInfo?.countryCode || "",
+        };
+      })
+    );
+
+    return matchingTripsWithInfo.filter((t): t is NonNullable<typeof t> => t !== null);
+  },
+});
 
 export const cleanupDeletedTrips = internalAction({
   args: {},
