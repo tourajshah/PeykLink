@@ -3,14 +3,37 @@
   "where_to": "Nereye?",
   "filter_route": "Rotayı Filtrele",
   "clear": "Temizle",
+  "search": "Ara",
+  "close": "Kapat",
   "origin_city": "Kalkış Şehri",
   "destination_city": "Varış Şehri",
   "filter_categories": "Kategorileri Filtrele",
   "filtered": "Filtrelendi",
   "trips": "Yolculuklar",
   "requests": "İstekler",
+  "travelers": "Gezginler",
+  "senders": "Göndericiler",
+  "traveler": "Gezgin",
+  "requester": "Alışverişçi",
+  "condition": "Durum",
+  "punctuality": "Zamanlama",
+  "comm": "İletişim",
+  "communication": "İletişim",
+  "recent_travelers": "Son Gezginler",
+  "recent_requests": "Son İstekler",
+  "from": "Nereden",
+  "to": "Nereye",
+  "tap_to_edit": "Düzenlemek için dokun",
+  "anywhere_route": "Herhangi bir yer • Herhangi bir rota",
+  "anywhere_any_route": "Herhangi bir yer • Herhangi bir rota",
   "no_items_found": "{{type}} bulunamadı",
   "no_items_subtitle": "Aramanızla eşleşen aktif {{type}} yok.\nFiltrelerinizi değiştirmeyi deneyin.",
+  "Istanbul": "İstanbul",
+  "Berlin": "Berlin",
+  "New York": "New York",
+  "Paris": "Paris",
+  "Tokyo": "Tokyo",
+  "Moscow": "Moskova",
   "categories": {
     "Electronics": "Elektronik",
     "Clothing": "Giyim",
@@ -19,7 +42,10 @@
     "Cosmetics": "Kozmetik",
     "Pets": "Evcil Hayvanlar",
     "Cigars": "Puro",
-    "Medication": "İlaç"
+    "Medication": "İlaç",
+    "Snacks": "Atıştırmalıklar",
+    "Gifts": "Hediyeler",
+    "Vitamins": "Vitaminler"
   },
   "create_new": "Yeni Oluştur",
   "connect_prompt": "Bugün nasıl bağlantı kurmak istersiniz?",
@@ -32,6 +58,19 @@
   "shop_global": "Küresel Alışveriş",
   "secure_escrow": "Güvenli Emanet Hesabı",
   "footer_trust": "Güvenli Ödemeler • Doğrulanmış Gezginler",
+  "community_active": "Gezginler şu anda aktif",
+  "layout": {
+    "tabs": {
+      "home": "Ana Sayfa",
+      "explore": "Keşfet",
+      "create": "Oluştur",
+      "inbox": "Gelen Kutusu",
+      "profile": "Profil"
+    }
+  },
+  "create_screen": {
+    "or": "veya"
+  },
   "explore": {
     "title": "Keşfet",
     "subtitle": "Seyahatlerini kazanca dönüştür.",
@@ -42,7 +81,44 @@
     "incoming_desc": "Şehrinize uçan insanlar.",
     "delivery_jobs": "Teslimat Görevleri",
     "delivery_desc": "Yolculuklarınızda ürün teslim ederek para kazanın.",
-    "potential_earnings": "POTANSİYEL KAZANÇ"
+    "potential_earnings": "POTANSİYEL KAZANÇ",
+    "global_network": "KÜRESEL AĞ",
+    "mission_control": "Görev Kontrolü",
+    "network_live": "AĞ AKTİF",
+    "scanning_deals": "Fırsatlar Taranıyor",
+    "opportunities": "fırsat",
+    "inbound_count": "{{count}} Gelen",
+    "wanted_count": "{{count}} İstenen",
+    "inbound_travelers_title": "Gelen Gezginler",
+    "inbound_travelers_subtitle": "İstediğiniz rotalarda uçan kişiler",
+    "empty_travelers": "Henüz rotanızda uçan gezgin yok.",
+    "request_pill": "İSTEK",
+    "available_bounties": "Mevcut Görevler",
+    "bounties_subtitle": "Teslimat bekleyen değerli eşyalar",
+    "empty_bounties": "Rotanız için görev bulunamadı.",
+    "total_potential_earnings": "TOPLAM POTANSİYEL KAZANÇ",
+    "earn": "KAZAN"
+  },
+  "offer_thread": {
+    "trip_request": "Seyahat İsteği",
+    "my_order": "Siparişim",
+    "offer_label": "TEKLİF",
+    "arrives": "Varış",
+    "time": {
+      "just_now": "Az önce",
+      "mins_ago": "{{count}}dk önce",
+      "hours_ago": "{{count}}sa önce",
+      "days_ago": "{{count}}g önce"
+    },
+    "status": {
+      "offer_sent": "Teklif Gönderildi",
+      "reply_needed": "Cevap Bekleniyor",
+      "awaiting_payment": "Ödeme Bekleniyor",
+      "in_progress": "Devam Ediyor",
+      "delivered": "Teslim Edildi",
+      "declined": "Reddedildi",
+      "cancelled": "İptal Edildi"
+    }
   },
   "cards": {
     "requesting_item": "Ürün İstiyor",
@@ -83,6 +159,38 @@
     "title": "Profil",
     "joined": "Katılım {{date}}",
     "edit_profile": "Profili Düzenle",
+    "recently": "Yakın Zamanda",
+    "quick_actions": {
+      "edit": "Düzenle",
+      "invite": "Davet Et",
+      "support": "Destek",
+      "logout": "Çıkış Yap"
+    },
+    "public": {
+      "share": "Paylaş",
+      "report": "Şikayet Et",
+      "report_title": "Kullanıcıyı Bildir",
+      "report_message": "Bu kullanıcıyı şikayet etmek istediğinizden emin misiniz? Ekibimiz profili ihlallere karşı inceleyecektir.",
+      "reviews_title": "Yorumlar",
+      "review_count_single": "{{count}} Yorum",
+      "review_count_plural": "{{count}} Yorum",
+      "empty_reviews_title": "Henüz Yorum Yok",
+      "empty_reviews_desc": "{{name}} henüz bir {{role}} olarak yorum almadı."
+    },
+    "wallet": {
+      "title": "İşlem Geçmişi",
+      "balance": "Bakiye",
+      "withdraw_funds": "Para Çek",
+      "empty_title": "Henüz işlem yok",
+      "empty_desc": "Bir teslimatı tamamladığınızda veya para çektiğinizde geçmişiniz burada görünecektir.",
+      "fund_btn": "Cüzdana Para Yükle (Yakında)"
+    },
+    "context": {
+      "active_items": "Aktif Öğeler",
+      "history": "Geçmiş",
+      "reviews": "Yorumlar",
+      "items_count": "{{count}} öğe"
+    },
     "tabs": {
       "traveler": "Gezgin",
       "shopper": "Alışverişçi"
@@ -106,7 +214,7 @@
     "toast": {
       "username_copied": "Kullanıcı Adı Kopyalandı"
     },
-    "share_msg": "GrabrApp'te {{name}} adlı kullanıcının profiline göz at!",
+    "share_msg": "PeykLink'te {{name}} adlı kullanıcının profiline göz at!",
     "modals": {
       "edit": {
         "title": "Profili Düzenle",
@@ -114,13 +222,9 @@
         "fullname_placeholder": "Adınız",
         "bio_label": "Biyografi",
         "bio_placeholder": "Bize kendinizden bahsedin...",
-        "save_btn": "Değişiklikleri Kaydet"
-      },
-      "wallet": {
-        "title": "İşlem Geçmişi",
-        "empty_title": "Henüz işlem yok",
-        "empty_desc": "Bir teslimatı tamamladığınızda veya para çektiğinizde geçmişiniz burada görünecektir.",
-        "fund_btn": "Cüzdana Para Yükle (Yakında)"
+        "save_btn": "Değişiklikleri Kaydet",
+        "change_photo": "Fotoğrafı değiştirmek için dokun",
+        "logout": "Çıkış Yap"
       }
     },
     "empty": {
@@ -137,8 +241,21 @@
     "search_placeholder": "Ürün veya kullanıcı ara...",
     "tabs": {
       "all": "Tümü",
-      "sent": "Gönderilen",
-      "received": "Gelen"
+      "sent": "Tekliflerim",
+      "received": "Bana Gelen",
+      "requests": "İstekler",
+      "trips": "Yolculuklar"
+    },
+    "section": {
+      "all": "Aktif Görüşmeler",
+      "sent": "Tekliflerim",
+      "received": "Bana Gelen",
+      "recent_activity": "Son Etkinlikler",
+      "my_orders": "Siparişlerim",
+      "my_trips": "Seyahatlerim",
+      "search_results": "Arama Sonuçları",
+      "items_count": "{{count}} öğe",
+      "found_count": "{{count}} bulundu"
     },
     "status": {
       "found_result": "{{count}} sonuç bulundu",
@@ -247,7 +364,10 @@
       "invalid_file_type": "Geçersiz Dosya Türü",
       "invalid_file_msg": "Sadece görsel dosyalarına izin verilir. Lütfen geçerli bir görsel seçin (JPEG, PNG vb.).",
       "file_too_large": "Dosya Çok Büyük",
-      "file_too_large_msg": "Görsel çok büyük ({{size}} MB). Maksimum dosya boyutu 5MB'dır. Lütfen daha küçük bir görsel seçin."
+      "file_too_large_msg": "Görsel çok büyük ({{size}} MB). Maksimum dosya boyutu 5MB'dır. Lütfen daha küçük bir görsel seçin.",
+      "permission_title": "İzin gerekli",
+      "permission_msg": "Lütfen fotoğraf galerinize erişim izni verin.",
+      "unknown_error": "Bilinmeyen bir hata oluştu"
     }
   },
   "payment": {
@@ -274,6 +394,13 @@
     "loading_error": "Mevcut kullanıcı kimliği belirlenemedi.",
     "loading_data_error": "Teklif verileri yüklenemedi.",
     "btn_go_back": "Geri Dön",
+    "requested_by": "İsteyen",
+    "steps": {
+      "offer": "Teklif",
+      "agreed": "Anlaşıldı",
+      "paid": "Ödendi",
+      "done": "Bitti"
+    },
     "status": {
       "offer_sent": "Teklif Gönderildi",
       "waiting_traveler": "Ürünü getirmek için {{name}} kullanıcısının teklifinizi kabul etmesi bekleniyor.",
@@ -396,6 +523,7 @@
     "duplicate_offer_title": "Zaten Bir Teklifiniz Var",
     "duplicate_offer_msg": "Mevcut teklifinizi gelen kutusunda görebilirsiniz.",
     "url_error": "Bu URL açılamadı",
+    "suggested_fee": "Önerilen Ücret",
     "labels": {
       "new": "Yeni",
       "requesting_item": "Ürün İstiyor",
@@ -425,6 +553,56 @@
         "cancel": "İptal",
         "confirm": "Onayla"
       }
+    }
+  },
+  "review_prompt": {
+    "badge": "YORUM YAP",
+    "title": "Deneyiminizi puanlayın",
+    "subtitle": "{{name}} ile etkileşiminiz nasıldı?"
+  },
+  "review": {
+    "hints": {
+      "0": "Puanlamak için yıldızlara dokunun",
+      "1": "Kötü",
+      "2": "Daha iyi olabilirdi",
+      "3": "İdare eder",
+      "4": "Çok İyi",
+      "5": "Mükemmel!"
+    },
+    "progress_complete": "%{{percent}} tamamlandı",
+    "alerts": {
+      "rating_required_title": "Puanlama Gerekli",
+      "rating_required_msg": "Lütfen deneyiminizi puanlamak için yıldızlara dokunun.",
+      "submit_success_title": "Yorum Gönderildi",
+      "submit_success_msg": "Topluluğa yardımcı olduğunuz için teşekkürler!",
+      "submit_error_title": "Hata",
+      "submit_error_msg": "Yorum gönderilemedi. Lütfen tekrar deneyin."
+    },
+    "questions": {
+      "delivery": "{{name}} ile teslimatınız nasıldı?",
+      "experience": "{{name}} ile deneyiminiz nasıldı?"
+    },
+    "subtext": {
+      "request": "İstek: {{name}}",
+      "transaction": "İşlem: {{name}}"
+    },
+    "labels": {
+      "overall": "GENEL PUAN",
+      "communication": "İletişim",
+      "punctuality": "Zamanlama",
+      "item_condition": "Ürün Durumu"
+    },
+    "headers": {
+      "delivery": "Teslimat Detayları",
+      "interaction": "Etkileşim Detayları",
+      "comments": "Ek Yorumlar"
+    },
+    "placeholders": {
+      "traveler": "Ürün iyi paketlenmiş miydi? Gezgin arkadaş canlısı mıydı?",
+      "requester": "İstek sahibiyle buluşmak kolay mıydı?"
+    },
+    "buttons": {
+      "submit": "Yorumu Gönder"
     }
   }
 }

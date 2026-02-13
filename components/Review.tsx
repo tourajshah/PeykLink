@@ -1,256 +1,233 @@
-import { Doc } from '@/convex/_generated/dataModel';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics'; // NEW: Imported Haptics
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// components/Review.tsx
+//
+// REDESIGN: Logical Storytelling (Airbnb Style)
+// Story: "Avatar (Traveler)" -> delivered -> "Image (Product)"
 
-// Modern Light Theme Colors
+import { Doc } from "@/convex/_generated/dataModel";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  Easing,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+
+// === TRANSLATION IMPORT ===
+import { useTranslation } from "react-i18next";
+
 const COLORS = {
-  cardBg: '#FFFFFF',
-  textPrimary: '#000000', // True black for high contrast
-  textSecondary: '#8E8E93', // Standard iOS secondary gray
-  accent: '#FFD60A', // Gold/Yellow for stars
-  accentBg: 'rgba(255, 214, 10, 0.15)', // Transparent yellow
-  buttonBg: '#1C1C1E', // Slightly off-black for a softer "modern" dark mode feel on light
-  buttonText: '#FFFFFF',
-  border: 'rgba(0, 0, 0, 0.05)', // Much subtler border for "Glass" feel
-  shadow: '#000000',
-  success: '#34C759', // Green for Price/Success
-  subtleFill: '#F2F2F7', // For placeholders
+  brandPink: "#FF385C",
+  textPrimary: "#222222", // Slightly softer black, typical of Airbnb
+  textSecondary: "#717171", // Airbnb's classic secondary text color
 };
 
-type ReviewPromptProps = {
+export default function ReviewPrompt({
+  negotiation,
+  travelerName,
+  productImageUrl,
+  userAvatarUrl,
+}: {
   negotiation: Doc<"negotiations">;
-  // New Optional Props to make it "Informative" based on your Schema
-  travelerName?: string; 
+  travelerName?: string;
   productName?: string;
-  productImageUrl?: string; // Derived from requests.imageKey
-  userAvatarUrl?: string;   // Derived from users.imageURL
-};
-
-const ReviewPrompt = ({ 
-    negotiation, 
-    travelerName = "Traveler", // Default fallback
-    productName = "your item", // Default fallback
-    productImageUrl,
-    userAvatarUrl
-}: ReviewPromptProps) => {
+  productImageUrl?: string;
+  userAvatarUrl?: string;
+}) {
   const router = useRouter();
+  const scale = useSharedValue(1);
+  const { t } = useTranslation();
 
-  // Helper to format currency (assuming USD for now based on 'proposedFee')
-  const formattedPrice = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0, // Industry Standard: Remove .00 if not needed for cleaner look
-    maximumFractionDigits: 0,
-  }).format(negotiation.proposedFee || 0);
+  // Fallback to translated "Traveler" if no name is provided
+  const displayName =
+    travelerName && travelerName !== "Traveler"
+      ? travelerName
+      : t("cards.traveler_default");
 
   const handlePress = () => {
-    // NEW: Haptic feedback for "Tactile" experience
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Lighter haptic for standard presses
     router.push({
-        pathname: '/(stack)/review', 
-        params: { negotiationId: negotiation._id }
+      pathname: "/(stack)/review",
+      params: { negotiationId: negotiation._id },
     });
   };
 
+  // Airbnb uses swift, smooth easing rather than bouncy springs
+  const handlePressIn = () => {
+    scale.value = withTiming(0.97, {
+      duration: 150,
+      easing: Easing.out(Easing.cubic),
+    });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withTiming(1, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <View style={styles.container}>
-        {/* Header Section: User Info & Status */}
-        <View style={styles.headerRow}>
-            <View style={styles.userInfo}>
-                {/* User Avatar or Fallback Icon */}
-                <View style={styles.avatarContainer}>
-                    {userAvatarUrl ? (
-                        <Image source={{ uri: userAvatarUrl }} style={styles.avatarImage} />
-                    ) : (
-                        <Ionicons name="person" size={12} color={COLORS.textSecondary} />
-                    )}
+    // Replaced springify() with a smooth duration-based entrance
+    <Animated.View
+      entering={FadeInUp.delay(200).duration(500)}
+      style={styles.wrapper}
+    >
+      <Pressable
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <Animated.View style={animatedStyle}>
+          {/* Layer 1: Ambient Shadow (Large, soft, deep) */}
+          <View style={styles.ambientShadow}>
+            {/* Layer 2: Key Shadow (Tight, defining edge) */}
+            <View style={styles.keyShadow}>
+              {/* Inner Container: Clips the gradient and content */}
+              <View style={styles.innerContainer}>
+                <LinearGradient
+                  colors={["#FFFFFF", "#FFF5F6"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+
+                <View style={styles.leftCol}>
+                  <View style={styles.badge}>
+                    <Ionicons name="star" size={10} color="#FFF" />
+                    <Text style={styles.badgeText}>
+                      {t("review_prompt.badge")}
+                    </Text>
+                  </View>
+                  <Text style={styles.title}>{t("review_prompt.title")}</Text>
+                  <Text style={styles.subtitle}>
+                    {t("review_prompt.subtitle", { name: displayName })}
+                  </Text>
                 </View>
-                {/* UPDATED: Added flex-shrink to handle long names gracefully */}
-                <Text style={styles.userNameText} numberOfLines={1} ellipsizeMode="tail">
-                    Review <Text style={styles.boldName}>{travelerName}</Text>
-                </Text>
-            </View>
-            
-            {/* Price Badge */}
-            <View style={styles.priceBadge}>
-                <Text style={styles.priceText}>{formattedPrice}</Text>
-            </View>
-        </View>
 
-        {/* Divider - Made subtler */}
-        <View style={styles.divider} />
+                {/* STORYTELLING IMAGES: User -> Product */}
+                <View style={styles.visualStory}>
+                  <Image
+                    source={{ uri: userAvatarUrl }}
+                    style={styles.avatar}
+                  />
 
-        {/* Main Content: Product Context */}
-        <View style={styles.contentContainer}>
-            {/* Product Image or Icon Box */}
-            <View style={styles.iconBox}>
-                {productImageUrl ? (
-                     <Image source={{ uri: `https://ts79.space/${productImageUrl}`  }} style={styles.productImage} />
-                ) : (
-                     <Ionicons name="cube-outline" size={20} color={COLORS.textSecondary} />
-                )}
-            </View>
-            
-            <View style={styles.textStack}>
-                 <Text style={styles.title}>Order Completed</Text>
-                 <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">
-                    How was <Text style={{color: COLORS.textPrimary}}>{productName}</Text>?
-                 </Text>
-            </View>
-        </View>
+                  <View style={styles.arrowCircle}>
+                    <Ionicons name="checkmark" size={10} color="#FFF" />
+                  </View>
 
-        {/* Footer: Action Button */}
-        <TouchableOpacity 
-            style={styles.actionButton}
-            activeOpacity={0.8} // Higher opacity for "Solid" feel
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            onPress={handlePress}
-        >
-            <View style={styles.starsContainer}>
-                {[1, 2, 3, 4, 5].map((_, i) => (
-                    <Ionicons key={i} name="star" size={10} color={COLORS.accent} />
-                ))}
+                  <Image
+                    source={{ uri: `https://ts79.space/${productImageUrl}` }}
+                    style={styles.productImg}
+                  />
+                </View>
+              </View>
             </View>
-            <Text style={styles.actionButtonText}>Rate Experience</Text> 
-            <Ionicons name="arrow-forward" size={14} color={COLORS.buttonText} />
-        </TouchableOpacity>
-    </View>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.cardBg,
-    padding: 14, // Reduced from 16 for a more compact, sleek feel
-    // REMOVED: External margins/radius/shadow to let the parent container control layout
-    // This fixes the "double box" look when inside InboxScreen
+  wrapper: { marginHorizontal: 20, marginBottom: 20 },
+
+  // Layer 1: Ambient Shadow
+  ambientShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    backgroundColor: "transparent",
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+
+  // Layer 2: Key Shadow
+  keyShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    backgroundColor: "transparent",
   },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1, // Takes available space to prevent pushing PriceBadge
-    marginRight: 8, // Spacing from PriceBadge
+
+  // Content Container (Handles clipping and shape)
+  innerContainer: {
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    overflow: "hidden", // Clips the LinearGradient
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.04)", // Very subtle border instead of solid pink
   },
-  avatarContainer: {
-    width: 24, // Smaller, minimalist avatar
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.subtleFill,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 0.5, // Tiny border for definition
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  userNameText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-    flexShrink: 1, // Allows text to shrink if needed
-  },
-  boldName: {
-    color: COLORS.textPrimary,
-    fontWeight: '600',
-  },
-  priceBadge: {
-    backgroundColor: '#F2FCF5', // Very light green
+
+  leftCol: { flex: 1, paddingRight: 10 },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.brandPink,
     paddingHorizontal: 8,
-    paddingVertical: 3, // Thinner badge
-    borderRadius: 6,
-    // Removed border for cleaner "Flat" look, kept background
+    paddingVertical: 4,
+    borderRadius: 6, // Slightly tighter radius
+    alignSelf: "flex-start",
+    marginBottom: 8,
+    gap: 4,
   },
-  priceText: {
-    fontSize: 11, // Smaller, discrete
-    fontWeight: '600',
-    color: COLORS.success,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginBottom: 12,
-    opacity: 0.6, // Softer divider
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14, // Reduced margin
-  },
-  iconBox: {
-    width: 42, // Slightly smaller
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: COLORS.subtleFill,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  textStack: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingRight: 4, // Safety padding
+  badgeText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: 15, // Slightly refined size
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: "600", // Airbnb often leans on 600 rather than full 700 for lists
     color: COLORS.textPrimary,
     marginBottom: 2,
-    letterSpacing: -0.2,
   },
-  subtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    lineHeight: 16,
-    fontWeight: '400',
+  subtitle: { fontSize: 13, color: COLORS.textSecondary },
+
+  visualStory: { flexDirection: "row", alignItems: "center" },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "#FFF",
+    zIndex: 1,
   },
-  actionButton: {
-    backgroundColor: COLORS.buttonBg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10, // Compact height
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    // Subtle shadow for the button to make it "pop"
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  arrowCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#00C853",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: -8,
+    zIndex: 2,
+    borderWidth: 1.5,
+    borderColor: "#FFF",
   },
-  starsContainer: {
-    flexDirection: 'row',
-    gap: 1, // Tighter gap for stars
-    opacity: 0.9,
-  },
-  actionButtonText: {
-    color: COLORS.buttonText,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: -0.1,
-    textAlign: 'center',
-    flex: 1,
+  productImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    marginLeft: -8,
+    borderWidth: 2,
+    borderColor: "#FFF",
+    zIndex: 0,
   },
 });
-
-export default ReviewPrompt;

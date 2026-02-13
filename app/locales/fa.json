@@ -32,6 +32,7 @@
   "shop_global": "خرید جهانی",
   "secure_escrow": "پرداخت امن (Escrow)",
   "footer_trust": "پرداخت‌های امن • مسافران تایید شده",
+  "community_active": "مسافران اکنون فعال هستند",
   "explore": {
     "title": "کاوش",
     "subtitle": "سفرهایتان را به درآمد تبدیل کنید.",
@@ -137,8 +138,16 @@
     "search_placeholder": "جستجوی کالا یا کاربر...",
     "tabs": {
       "all": "همه",
-      "sent": "ارسال شده",
-      "received": "دریافت شده"
+      "sent": "پیشنهادهای من",
+      "received": "پیشنهاد به من"
+    },
+    "section": {
+      "all": "مذاکرات فعال",
+      "sent": "پیشنهادهای من",
+      "received": "پیشنهاد به من",
+      "search_results": "نتایج جستجو",
+      "items_count": "{{count}} مورد",
+      "found_count": "{{count}} یافت شد"
     },
     "status": {
       "found_result": "{{count}} نتیجه یافت شد",

@@ -1,545 +1,1182 @@
-import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
-import { useUser } from '@clerk/clerk-expo';
-import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMutation, useQuery } from 'convex/react';
-import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import LottieView from 'lottie-react-native';
-import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, LayoutAnimation, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+/**
+ * Request Component - Airbnb-Level Design
+ * Displays a delivery request card in the PeykLink marketplace
+ *
+ * Design: Clean, flat colors, generous whitespace, clear hierarchy
+ *
+ * * PRODUCTION FIX (FEB 2026):
+ * - [CRITICAL FIX] Removed `entering={FadeInDown}` from root Animated.View.
+ *   This was causing the Reanimated "transform overwrite" warning because FadeInDown
+ *   uses transform internally, conflicting with parent scroll-driven animated styles.
+ * - [FIX] Removed LayoutAnimation.configureNext() from toggleDescription.
+ *   LayoutAnimation conflicts with Reanimated on the same render tree.
+ * - [CLEANUP] Removed UIManager.setLayoutAnimationEnabledExperimental block (no-op in New Arch).
+ */
+
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useUser } from "@clerk/clerk-expo";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery } from "convex/react";
+import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  // [REMOVED] LayoutAnimation - conflicts with Reanimated 4.x, causes transform overwrite warning
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  // [REMOVED] UIManager - was only used for setLayoutAnimationEnabledExperimental (no-op in New Arch)
+  View,
+} from "react-native";
 import CountryFlag from "react-native-country-flag";
-import Animated, { FadeIn } from 'react-native-reanimated';
-import Toast from 'react-native-toast-message';
+// [REMOVED] FadeInDown import - was applied as entering animation on card root,
+// caused Reanimated "transform overwrite" warning when parent uses animated scroll styles.
+import Animated from "react-native-reanimated";
+import Toast from "react-native-toast-message";
 
-// === TRANSLATION IMPORT ===
-import { useTranslation } from 'react-i18next';
+// === TRANSLATION ===
+import { useTranslation } from "react-i18next";
 
-// 1. REFINED PALETTE: Matches Index & Trip Screens
-const PALETTE = {
-    surface: '#FFFFFF',
-    shadow: 'rgba(50, 50, 93, 0.15)',
-    primary: '#3B82F6', 
-    secondary: '#10B981',
-    textPrimary: '#111827',
-    textSecondary: '#6B7280',
-    primaryGradient: ['#0EA5E9', '#2563EB'] as const,
-    secondaryActionGradient: ['#10B981', '#059669'] as const, 
-    border: '#E5E7EB',
-    destructive: '#EF4444',
-    ratingStar: '#FBBF24',
-    glassBorder: 'rgba(255, 255, 255, 0.3)',
-    softBackground: '#F9FAFB',
-};
+// [REMOVED] UIManager.setLayoutAnimationEnabledExperimental block.
+// Was enabling LayoutAnimation on Android, but LayoutAnimation conflicts with
+// Reanimated 4.x on the same render tree. Also a no-op in Expo 50+ / New Architecture.
 
-// Specific Green Palette for Requests
-const REQUEST_PALETTE = {
-    primaryGradient: ['#10B981', '#059669'] as const, // Sharper Green
-    primary: '#10B981',
-    reward: '#059669', 
-};
+// ============================================================================
+// DESIGN TOKENS - Matching Index Screen
+// ============================================================================
+const DESIGN = {
+  colors: {
+    background: "#FFFFFF",
+    backgroundSecondary: "#F7F7F7",
+    surface: "#FFFFFF",
 
+    textPrimary: "#222222",
+    textSecondary: "#717171",
+    textTertiary: "#B0B0B0",
+    textInverse: "#FFFFFF",
 
+    // Brand colors
+    brand: "#FF385C",
+    brandLight: "rgba(255, 56, 92, 0.08)",
+
+    // Request accent (teal/green)
+    accent: "#00A699",
+    accentLight: "rgba(0, 166, 153, 0.08)",
+    accentDark: "#008489",
+
+    border: "#EBEBEB",
+    borderFocus: "#222222",
+    divider: "#DDDDDD",
+
+    success: "#008A05",
+    warning: "#E07912",
+    error: "#C13515",
+
+    rating: "#FFB400",
+    ratingBg: "#FFF8E6",
+
+    overlay: "rgba(0, 0, 0, 0.5)",
+  },
+
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
+  },
+
+  radius: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+    full: 9999,
+  },
+
+  shadow: {
+    card: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      // elevation: 3,
+    },
+    elevated: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      // elevation: 8,
+    },
+  },
+} as const;
+
+// ============================================================================
+// TYPES
+// ============================================================================
 type RequestProps = {
-    request:{
-        _id: Id<"requests">;
-        _creationTime: number;
-        description?: string;
-        productURL?: string;
-        imageKey?: string;
-        productWeight?: string;
-        originCity: string;
-        destinationCity: string;
-        itemTypes?: string;
-        requiredByDate: number;
-        itemPrice: number;
-        quantity: number;
-        travelerFee: number;
-        productName: string;
-        originCountry: string;
-        destinationCountry: string;
-        status: string;
-        originCountryCode: string;
-        destinationCountryCode: string;
-        requester:{
-            _id: string;
-            username: string;
-            image: string;
-            rating?: number;
-            asRequesterRating?: number;
-        };
-    }
-}
-
-// StarDisplay Component
-type StarDisplayProps = {
-    rating?: number;
-    size?: number;
+  request: {
+    _id: Id<"requests">;
+    _creationTime: number;
+    description?: string;
+    productURL?: string;
+    imageKey?: string;
+    productWeight?: string;
+    originCity: string;
+    destinationCity: string;
+    itemTypes?: string;
+    requiredByDate: number;
+    itemPrice: number;
+    quantity: number;
+    travelerFee: number;
+    productName: string;
+    originCountry: string;
+    destinationCountry: string;
+    status: string;
+    originCountryCode: string;
+    destinationCountryCode: string;
+    requester: {
+      _id: string;
+      username: string;
+      image: string;
+      rating?: number;
+      asRequesterRating?: number;
+    };
+  };
 };
 
-const StarDisplay = ({ rating=0, size = 14 }: StarDisplayProps) => {
-    // Need translation inside component for "New"
-    const { t } = useTranslation();
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-        <MaterialIcons name="star" size={size} color={PALETTE.ratingStar} style={{marginRight: 2}} />
-        <Text style={{fontSize: 12, fontWeight: '700', color: '#B45309'}}>{rating > 0 ? rating.toFixed(1) : t('request_component.labels.new')}</Text>
+// ============================================================================
+// SUB-COMPONENTS
+// ============================================================================
+
+// Rating Badge Component
+const RatingBadge: React.FC<{ rating?: number }> = ({ rating = 0 }) => {
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.ratingBadge}>
+      <Ionicons name="star" size={12} color={DESIGN.colors.rating} />
+      <Text style={styles.ratingText}>
+        {rating > 0 ? rating.toFixed(1) : t("new")}
+      </Text>
+    </View>
+  );
+};
+
+// Route Display Component
+const RouteDisplay: React.FC<{
+  originCode: string;
+  originCity: string;
+  destCode: string;
+  destCity: string;
+}> = ({ originCode, originCity, destCode, destCity }) => (
+  <View style={styles.routeContainer}>
+    <View style={styles.locationBlock}>
+      <View style={styles.flagContainer}>
+        <CountryFlag isoCode={originCode.toLowerCase()} size={14} />
       </View>
-    );
-};
+      <View style={styles.locationTextBlock}>
+        <Text style={styles.countryCode}>{originCode}</Text>
+        <Text style={styles.cityName} numberOfLines={1}>
+          {originCity}
+        </Text>
+      </View>
+    </View>
 
-export default function Request({request}: RequestProps) {
-    // Initialize Translation
-    const { t, i18n } = useTranslation();
+    <View style={styles.routeLine}>
+      <View style={styles.routeDot} />
+      <View style={styles.routeDash} />
+      <Feather name="package" size={16} color={DESIGN.colors.accent} />
+      <View style={styles.routeDash} />
+      <View style={[styles.routeDot, styles.routeDotEnd]} />
+    </View>
 
-    const formattedDate = new Date(request.requiredByDate).toLocaleDateString(i18n.language, {
-        month: 'short', day: 'numeric' 
+    <View style={[styles.locationBlock, styles.locationBlockEnd]}>
+      <View style={styles.locationTextBlock}>
+        <Text style={[styles.countryCode, styles.textRight]}>{destCode}</Text>
+        <Text style={[styles.cityName, styles.textRight]} numberOfLines={1}>
+          {destCity}
+        </Text>
+      </View>
+      <View style={styles.flagContainer}>
+        <CountryFlag isoCode={destCode.toLowerCase()} size={14} />
+      </View>
+    </View>
+  </View>
+);
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+export default function Request({ request }: RequestProps) {
+  const { t, i18n } = useTranslation();
+
+  // === DATE FORMATTING ===
+  const formattedDate = new Date(request.requiredByDate).toLocaleDateString(
+    i18n.language,
+    {
+      month: "short",
+      day: "numeric",
+    },
+  );
+
+  // === USER & DATA ===
+  const { user } = useUser();
+  const currentUser = useQuery(
+    api.users.getUserByClerkId,
+    user ? { clerkId: user?.id } : "skip",
+  );
+
+  const { itemTotal } = useMemo(
+    () => ({
+      itemTotal: request.itemPrice * request.quantity,
+    }),
+    [request.itemPrice, request.quantity],
+  );
+
+  const formatCurrency = (amount: number) => `$${amount.toFixed(0)}`;
+
+  // === STATE ===
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [isEditModalVisible, setEditModalVisible] = useState(false);
+  const [isOfferModalVisible, setOfferModalVisible] = useState(false);
+  const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [isImageViewVisible, setImageViewVisible] = useState(false);
+  const [proposedFee, setProposedFee] = useState(
+    request.travelerFee.toFixed(2),
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // === MUTATIONS ===
+  const deleteRequest = useMutation(api.requests.deleteRequest);
+  const createInitialOffer = useMutation(api.offers.createInitialOffer);
+
+  // === COMPUTED ===
+  const isLoadingUser = currentUser === undefined;
+  const isOwner = currentUser?._id === request.requester._id;
+  const isPotentialTraveler = !isLoadingUser && !isOwner;
+
+  const myMatchingTrips = useQuery(
+    api.trips.getMyMatchingTrips,
+    isPotentialTraveler
+      ? {
+          originCity: request.originCity,
+          destinationCity: request.destinationCity,
+        }
+      : "skip",
+  );
+  const isLoadingTrips = myMatchingTrips === undefined;
+  const hasMatchingTrip = myMatchingTrips && myMatchingTrips.length > 0;
+
+  // === HANDLERS ===
+  const handleProfilePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/user/${request.requester._id}`);
+  };
+
+  const handleDeleteConfirm = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    try {
+      await deleteRequest({ requestId: request._id });
+      setDeleteModalVisible(false);
+    } catch (error) {
+      Alert.alert(t("error"), t("request_component.delete_error"));
+    }
+  };
+
+  const handleEditConfirm = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push({
+      pathname: "/orders",
+      params: { request: JSON.stringify(request) },
     });
+    setEditModalVisible(false);
+  };
 
-    const animation = useRef<LottieView>(null);
-    // Removed animation speed state complexity for smoother scroll performance in this design
-    
-    const {user} = useUser();
-    const currentUser = useQuery(api.users.getUserByClerkId, user ? {clerkId: user?.id} : "skip");
-    
-    const { itemTotal } = useMemo(() => {
-        const itemTotal = request.itemPrice * request.quantity;
-        return { itemTotal };
-    }, [request.itemPrice, request.quantity]);
+  const handleOpenOfferModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!hasMatchingTrip) {
+      Alert.alert(
+        t("request_component.no_matching_trip"),
+        t("request_component.trip_needed_msg", {
+          origin: request.originCity,
+          dest: request.destinationCity,
+        }),
+      );
+      return;
+    }
+    setOfferModalVisible(true);
+  };
 
-    const formatCurrency = (amount: number) => `$${amount.toFixed(0)}`; // Removed cents for cleaner UI
+  const handleSubmitOffer = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsSubmitting(true);
 
-    const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
-    const [isEditModalVisible, setEditModalVisible] = useState(false);
-    const [isOfferModalVisible, setOfferModalVisible] = useState(false);
-    const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
-    const [isImageViewVisible, setImageViewVisible] = useState(false);
-    const [proposedFee, setProposedFee] = useState(request.travelerFee.toFixed(2));
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const deleteRequest = useMutation(api.requests.deleteRequest);
-    const createInitialOffer = useMutation(api.offers.createInitialOffer);
-    
-    const isOwner = currentUser?._id === request.requester._id;
-    // 2. BUG FIX: Loading State
-    const isLoadingUser = currentUser === undefined;
-    const isPotentialTraveler = !isLoadingUser && !isOwner;
+    const fee = parseFloat(proposedFee);
+    if (isNaN(fee) || fee <= 0) {
+      Alert.alert(
+        t("request_component.invalid_fee"),
+        t("request_component.valid_amount_msg"),
+      );
+      setIsSubmitting(false);
+      return;
+    }
 
-    const myMatchingTrips = useQuery(
-        api.trips.getMyMatchingTrips,
-        isPotentialTraveler ? { originCity: request.originCity, destinationCity: request.destinationCity } : "skip"
-    );
-    const isLoadingTrips = myMatchingTrips === undefined;
+    if (!myMatchingTrips || myMatchingTrips.length === 0) {
+      setIsSubmitting(false);
+      return;
+    }
 
-    // Handlers
-    const handleProfilePress = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.push(`/user/${request.requester._id}`);
-    };
+    try {
+      const result = await createInitialOffer({
+        requestId: request._id,
+        tripId: myMatchingTrips[0]._id,
+        proposedFee: fee,
+      });
 
-    const handleDeleteWithConfirmation = async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        try {
-            await deleteRequest({ requestId: request._id });
-            setDeleteModalVisible(false);
-        } catch (error) {
-            alert(t('request_component.delete_error'));
-        }
-    };
-    
-    const handleEditWithConfirmation = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push({ pathname: '/orders', params: { request: JSON.stringify(request) } });
-        setEditModalVisible(false);
-    };
+      if (result.success && result.negotiationId) {
+        setOfferModalVisible(false);
+        router.push({
+          pathname: "/(stack)/offers",
+          params: { id: result.negotiationId },
+        });
+      } else if (result.reason === "DUPLICATE_OFFER") {
+        setOfferModalVisible(false);
+        Toast.show({
+          type: "info",
+          text1: t("request_component.duplicate_offer_title"),
+          text2: t("request_component.duplicate_offer_msg"),
+        });
+      }
+    } catch (error) {
+      Alert.alert(t("error"), (error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    const handleOpenOfferModal = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        if (!myMatchingTrips || myMatchingTrips.length === 0) {
-            Alert.alert(
-                t('request_component.no_matching_trip'),
-                t('request_component.trip_needed_msg', { origin: request.originCity, dest: request.destinationCity })
-            );
-            return;
-        }
-        setOfferModalVisible(true);
-    };
+  const toggleDescription = () => {
+    // [REMOVED] LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // LayoutAnimation conflicts with Reanimated 4.x - causes transform overwrite warning.
+    // The expand/collapse still works via numberOfLines prop change, just without the
+    // smooth height animation. This is the same approach used by Airbnb's app.
+    setDescriptionExpanded(!isDescriptionExpanded);
+  };
 
-    const handleSubmitOffer = async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        setIsSubmitting(true);
-        const fee = parseFloat(proposedFee);
-        if (isNaN(fee) || fee <= 0) {
-            Alert.alert(t('request_component.invalid_fee'), t('request_component.valid_amount_msg'));
-            setIsSubmitting(false);
-            return;
-        }
-        
-        // Safety check
-        if (!myMatchingTrips || myMatchingTrips.length === 0) return;
-        
-        const tripIdforOffer = myMatchingTrips[0]._id;
-        try {
-            const result = await createInitialOffer({
-                requestId: request._id,
-                tripId: tripIdforOffer,
-                proposedFee: fee,
-            });
-            if (result.success && result.negotiationId) {
-                setOfferModalVisible(false);
-                router.push({ pathname: '/(stack)/offers', params: { id: result.negotiationId } });
-            } else if (result.reason === "DUPLICATE_OFFER") {
-                setOfferModalVisible(false)
-                setIsSubmitting(false)
-                Toast.show({
-                    type:'info',
-                    text1: t('request_component.duplicate_offer_title'),
-                    text2: t('request_component.duplicate_offer_msg'),
-                })
-            }
-        } catch (error) {
-            Alert.alert("Error", (error as Error).message || t('request_component.offer_sent')); // Using generic success/error msg or specific
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
-    const toggleDescription = () => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setDescriptionExpanded(!isDescriptionExpanded);
-    };
+  const handleProductLink = async () => {
+    if (!request.productURL) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const handleProductLink = async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        if (!request.productURL) return;
-        
-        try {
-            let url = request.productURL;
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
-            }
-            await WebBrowser.openBrowserAsync(url);
-        } catch (error) {
-            Alert.alert(t('request_component.url_error'));
-        }
-    };
+    try {
+      let url = request.productURL;
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        url = "https://" + url;
+      }
+      await WebBrowser.openBrowserAsync(url);
+    } catch (error) {
+      Alert.alert(t("error"), t("request_component.url_error"));
+    }
+  };
 
-    return (
-        <Animated.View style={cardStyles.cardContainer} entering={FadeIn.duration(500)}>
-            {/* Confirmation Modals (Same style as Trip) */}
-            <Modal animationType='fade' transparent={true} visible={isDeleteModalVisible} onRequestClose={() => setDeleteModalVisible(false)}>
-                <View style={cardStyles.modalCenteredView}>
-                    <View style={cardStyles.modalView}>
-                        <Text style={cardStyles.modalTitle}>{t('request_component.modals.delete.title')}</Text>
-                        <Text style={cardStyles.modalText}>{t('request_component.modals.delete.text')}</Text>
-                        <View style={cardStyles.modalButtonContainer}>
-                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setDeleteModalVisible(false)}>
-                                <Text style={cardStyles.modalButtonText}>{t('request_component.modals.delete.cancel')}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonDestructive]} onPress={handleDeleteWithConfirmation}>
-                                <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>{t('request_component.modals.delete.confirm')}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-            
-            <Modal animationType='fade' transparent={true} visible={isEditModalVisible} onRequestClose={() => setEditModalVisible(false)}>
-                <View style={cardStyles.modalCenteredView}>
-                    <View style={cardStyles.modalView}>
-                        <Text style={cardStyles.modalTitle}>{t('request_component.modals.edit.title')}</Text>
-                        <Text style={cardStyles.modalText}>{t('request_component.modals.edit.text')}</Text>
-                        <View style={cardStyles.modalButtonContainer}>
-                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonCancel]} onPress={() => setEditModalVisible(false)}>
-                                <Text style={cardStyles.modalButtonText}>{t('request_component.modals.edit.cancel')}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[cardStyles.modalButton, cardStyles.modalButtonConfirm]} onPress={handleEditWithConfirmation}>
-                                <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>{t('request_component.modals.edit.confirm')}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Image Viewer Modal */}
-            <Modal animationType="fade" transparent={true} visible={isImageViewVisible} onRequestClose={() => setImageViewVisible(false)}>
-                <Pressable style={cardStyles.imageViewerBackdrop} onPress={() => setImageViewVisible(false)}>
-                    <Image source={{ uri: `https://ts79.space/${request.imageKey}` }} style={cardStyles.imageViewerImage} contentFit="contain" />
-                </Pressable>
-            </Modal>
-
-            {/* === Card Header (Matched Trip) === */}
-            <View style={cardStyles.cardHeader}>
-                <TouchableOpacity style={cardStyles.travelerInfo} onPress={handleProfilePress}>
-                    <Image source={{ uri: request.requester.image }} style={cardStyles.travelerAvatar} cachePolicy="memory-disk"/>
-                    <View>
-                         <Text style={cardStyles.travelerName}>{request.requester.username}</Text>
-                         <Text style={cardStyles.subHeaderText}>{t('request_component.labels.requesting_item')}</Text>
-                    </View>
-                </TouchableOpacity>
-
-                {isOwner ? (
-                    <View style={cardStyles.headerActions}>
-                        <TouchableOpacity onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setEditModalVisible(true);
-                        }} style={cardStyles.actionIcon}>
-                            <MaterialCommunityIcons name='pencil-outline' size={20} color={PALETTE.textSecondary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setDeleteModalVisible(true);
-                        }} style={[cardStyles.actionIcon, {marginLeft: 12}]}>
-                            <MaterialCommunityIcons name='trash-can-outline' size={20} color={PALETTE.destructive} />
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <StarDisplay rating={request.requester.asRequesterRating} />
-                )}
+  // === RENDER ===
+  // [CRITICAL FIX] Removed entering={FadeInDown.duration(400).springify()} from Animated.View below.
+  // FadeInDown uses transform (translateY) internally. When this component is rendered
+  // inside a parent with scroll-driven animated styles (FlashList + useAnimatedScrollHandler),
+  // both compete for the transform property, triggering the Reanimated warning:
+  // "Property 'transform' of AnimatedComponent(View) may be overwritten by a layout animation."
+  // The card now renders immediately - which is actually faster perceived load.
+  return (
+    <Animated.View
+      style={styles.card}
+    >
+      {/* Delete Modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isDeleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setDeleteModalVisible(false)}
+        >
+          <Pressable style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {t("request_component.modals.delete.title")}
+            </Text>
+            <Text style={styles.modalText}>
+              {t("request_component.modals.delete.text")}
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalButtonSecondary}
+                onPress={() => setDeleteModalVisible(false)}
+                accessibilityLabel={t("cancel")}
+                accessibilityRole="button"
+              >
+                <Text style={styles.modalButtonSecondaryText}>
+                  {t("cancel")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButtonDestructive}
+                onPress={handleDeleteConfirm}
+                accessibilityLabel={t("delete")}
+                accessibilityRole="button"
+              >
+                <Text style={styles.modalButtonDestructiveText}>
+                  {t("delete")}
+                </Text>
+              </TouchableOpacity>
             </View>
-            
-            {/* === Route Visualization (Matched Trip Layout) === */}
-            <View style={cardStyles.routeContainer}>
-                <View style={cardStyles.locationBlockLeft}>
-                    <Text style={cardStyles.cityCode}>{request.originCountryCode}</Text>
-                    <Text style={cardStyles.cityName} numberOfLines={1}>{request.originCity}</Text>
-                    <View style={cardStyles.flagWrapper}>
-                        <CountryFlag isoCode={request.originCountryCode.toLowerCase()} size={12} />
-                    </View>
-                </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
-                {/* Animation Center */}
-                <View style={cardStyles.routeGraphic}>
-                    <LottieView
-                        ref={animation}
-                        style={cardStyles.lottieIcon}
-                        source={require('@/assets/animations/request-animation.json')}
-                        autoPlay
-                        loop
-                    />
-                    <View style={cardStyles.dottedLine} />
-                </View>
-
-                <View style={cardStyles.locationBlockRight}>
-                    <Text style={cardStyles.cityCode}>{request.destinationCountryCode}</Text>
-                    <Text style={cardStyles.cityName} numberOfLines={1}>{request.destinationCity}</Text>
-                    <View style={cardStyles.flagWrapper}>
-                        <CountryFlag isoCode={request.destinationCountryCode.toLowerCase()} size={12} />
-                    </View>
-                </View>
+      {/* Edit Modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isEditModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setEditModalVisible(false)}
+        >
+          <Pressable style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {t("request_component.modals.edit.title")}
+            </Text>
+            <Text style={styles.modalText}>
+              {t("request_component.modals.edit.text")}
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalButtonSecondary}
+                onPress={() => setEditModalVisible(false)}
+                accessibilityLabel={t("cancel")}
+                accessibilityRole="button"
+              >
+                <Text style={styles.modalButtonSecondaryText}>
+                  {t("cancel")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButtonPrimary}
+                onPress={handleEditConfirm}
+                accessibilityLabel={t("edit")}
+                accessibilityRole="button"
+              >
+                <Text style={styles.modalButtonPrimaryText}>{t("edit")}</Text>
+              </TouchableOpacity>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
-            {/* === Product Info Block === */}
-            <View style={cardStyles.productContainer}>
-                <View style={cardStyles.productTextColumn}>
-                    <Text style={cardStyles.productName} numberOfLines={2}>{request.productName}</Text>
-                    {request.productURL && (
-                        <TouchableOpacity style={cardStyles.linkButton} onPress={handleProductLink}>
-                             <Ionicons name="link" size={12} color={REQUEST_PALETTE.primary} />
-                             <Text style={cardStyles.linkText}>{t('request_component.labels.view_product')}</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-                {request.imageKey && (
-                     <TouchableOpacity onPress={() => setImageViewVisible(true)}>
-                        <Image
-                            source={{ uri: `https://ts79.space/${request.imageKey}` }}
-                            style={cardStyles.productThumb}
-                            contentFit="cover"
-                            transition={300}
-                        />
-                     </TouchableOpacity>
-                )}
+      {/* Image Viewer Modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isImageViewVisible}
+        onRequestClose={() => setImageViewVisible(false)}
+      >
+        <Pressable
+          style={styles.imageViewerOverlay}
+          onPress={() => setImageViewVisible(false)}
+        >
+          <Image
+            source={{ uri: `https://ts79.space/${request.imageKey}` }}
+            style={styles.imageViewerImage}
+            contentFit="contain"
+          />
+          <TouchableOpacity
+            style={styles.imageViewerClose}
+            onPress={() => setImageViewVisible(false)}
+            accessibilityLabel={t("close")}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="close"
+              size={24}
+              color={DESIGN.colors.textInverse}
+            />
+          </TouchableOpacity>
+        </Pressable>
+      </Modal>
+
+      {/* Offer Modal */}
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isOfferModalVisible}
+        onRequestClose={() => setOfferModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setOfferModalVisible(false)}
+        >
+          <Pressable style={styles.offerModalContent}>
+            <View style={styles.offerModalHandle} />
+            <Text style={styles.modalTitle}>
+              {t("request_component.labels.propose_fee")}
+            </Text>
+
+            <View style={styles.offerInputContainer}>
+              <Text style={styles.offerCurrency}>$</Text>
+              <TextInput
+                style={styles.offerInput}
+                placeholder={request.travelerFee.toFixed(2)}
+                placeholderTextColor={DESIGN.colors.textTertiary}
+                keyboardType="numeric"
+                value={proposedFee}
+                onChangeText={setProposedFee}
+                autoFocus
+                accessibilityLabel={t("request_component.labels.propose_fee")}
+              />
             </View>
 
-            {/* === Financial & Details Block (Grey Box) === */}
-            <View style={cardStyles.detailsBlock}>
-                {/* Reward Highlight */}
-                <View style={cardStyles.detailItem}>
-                    <Text style={cardStyles.detailLabel}>{t('request_component.labels.reward')}</Text>
-                    <Text style={[cardStyles.detailValue, { color: REQUEST_PALETTE.reward }]}>
-                        {formatCurrency(request.travelerFee)}
-                    </Text>
-                </View>
-                <View style={cardStyles.detailSeparator} />
-                {/* Due Date */}
-                <View style={cardStyles.detailItem}>
-                    <Text style={cardStyles.detailLabel}>{t('request_component.labels.due')}</Text>
-                    <Text style={cardStyles.detailValue}>{formattedDate}</Text>
-                </View>
-                <View style={cardStyles.detailSeparator} />
-                {/* Item Cost */}
-                <View style={cardStyles.detailItem}>
-                    <Text style={cardStyles.detailLabel}>{t('request_component.labels.cost')}</Text>
-                    <Text style={cardStyles.detailValue}>{formatCurrency(itemTotal)}</Text>
-                </View>
-            </View>
-            
-            {/* Description (Expandable) */}
-            {request.description && (
-                <View style={cardStyles.descriptionContainer}>
-                    <Text style={cardStyles.descriptionText} numberOfLines={isDescriptionExpanded ? undefined : 2}>
-                        {request.description}
-                    </Text>
-                    <TouchableOpacity onPress={toggleDescription} hitSlop={10}>
-                        <Text style={cardStyles.readMoreText}>{isDescriptionExpanded ? t('request_component.labels.show_less') : t('request_component.labels.show_more')}</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+            <Text style={styles.offerHint}>
+              {t("request_component.suggested_fee")}: $
+              {request.travelerFee.toFixed(2)}
+            </Text>
 
-            {/* === Action Button (BUG FIXED: No Flashing) === */}
-            {isPotentialTraveler && (
-                <Pressable onPress={handleOpenOfferModal} disabled={isLoadingTrips} style={{marginTop: 16}}>
-                    <LinearGradient 
-                        colors={isLoadingTrips ? [PALETTE.textSecondary, PALETTE.textSecondary] : REQUEST_PALETTE.primaryGradient} 
-                        style={cardStyles.actionButton}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    >
-                        <Text style={cardStyles.actionButtonText}>
-                            {isLoadingTrips ? t('request_component.labels.checking_trips') : t('request_component.labels.make_offer')}
-                        </Text>
-                        {!isLoadingTrips && <FontAwesome5 name="arrow-right" size={14} color="#FFFFFF" style={{marginLeft: 8}} />}
-                    </LinearGradient>
-                </Pressable>
-            )}
+            <TouchableOpacity
+              style={[
+                styles.offerSubmitButton,
+                isSubmitting && styles.buttonDisabled,
+              ]}
+              onPress={handleSubmitOffer}
+              disabled={isSubmitting}
+              accessibilityLabel={t("request_component.labels.send_offer")}
+              accessibilityRole="button"
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={DESIGN.colors.textInverse} />
+              ) : (
+                <Text style={styles.offerSubmitText}>
+                  {t("request_component.labels.send_offer")}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
-            {/* Offer Submission Modal */}
-            <Modal transparent={true} visible={isOfferModalVisible} onRequestClose={() => setOfferModalVisible(false)}>
-                <Pressable style={cardStyles.modalCenteredView} onPress={() => setOfferModalVisible(false)}>
-                    <Pressable style={cardStyles.modalView}>
-                        <Text style={cardStyles.modalTitle}>{t('request_component.labels.propose_fee')}</Text>
-                        <View style={cardStyles.modalInputContainer}>
-                            <Text style={cardStyles.dollarSign}>$</Text>
-                            <TextInput 
-                                style={cardStyles.modalInput} 
-                                placeholder={request.travelerFee.toFixed(2)} 
-                                placeholderTextColor={PALETTE.textSecondary} 
-                                keyboardType="numeric" 
-                                value={proposedFee} 
-                                onChangeText={setProposedFee} 
-                                autoFocus={true} 
-                            />
-                        </View>
-                        <Pressable onPress={handleSubmitOffer} disabled={isSubmitting}>
-                            <LinearGradient 
-                                colors={isSubmitting ? [PALETTE.textSecondary, PALETTE.textSecondary] : REQUEST_PALETTE.primaryGradient} 
-                                style={cardStyles.modalSubmitButton}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                            >
-                                {isSubmitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[cardStyles.modalButtonText, {color: '#FFF'}]}>{t('request_component.labels.send_offer')}</Text>}
-                            </LinearGradient>
-                        </Pressable>
-                    </Pressable>
-                </Pressable>
-            </Modal>
-        </Animated.View>
-    );
+      {/* === CARD HEADER === */}
+      <View style={styles.cardHeader}>
+        <TouchableOpacity
+          style={styles.userInfo}
+          onPress={handleProfilePress}
+          accessibilityLabel={`${t("view_profile")}: ${request.requester.username}`}
+          accessibilityRole="button"
+        >
+          <Image
+            source={{ uri: request.requester.image }}
+            style={styles.avatar}
+            cachePolicy="memory-disk"
+          />
+          <View style={styles.userTextContainer}>
+            <Text style={styles.username}>{request.requester.username}</Text>
+            <Text style={styles.userSubtext}>
+              {t("request_component.labels.requesting_item")}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {isOwner ? (
+          <View style={styles.ownerActions}>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setEditModalVisible(true);
+              }}
+              style={styles.iconButton}
+              accessibilityLabel={t("edit")}
+              accessibilityRole="button"
+            >
+              <Feather
+                name="edit-2"
+                size={18}
+                color={DESIGN.colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setDeleteModalVisible(true);
+              }}
+              style={styles.iconButton}
+              accessibilityLabel={t("delete")}
+              accessibilityRole="button"
+            >
+              <Feather name="trash-2" size={18} color={DESIGN.colors.error} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <RatingBadge rating={request.requester.asRequesterRating} />
+        )}
+      </View>
+
+      {/* === ROUTE === */}
+      <RouteDisplay
+        originCode={request.originCountryCode}
+        originCity={request.originCity}
+        destCode={request.destinationCountryCode}
+        destCity={request.destinationCity}
+      />
+
+      {/* === PRODUCT INFO === */}
+      <View style={styles.productSection}>
+        <View style={styles.productInfo}>
+          <Text style={styles.productName} numberOfLines={2}>
+            {request.productName}
+          </Text>
+          {request.productURL && (
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={handleProductLink}
+              accessibilityLabel={t("request_component.labels.view_product")}
+              accessibilityRole="link"
+            >
+              <Feather
+                name="external-link"
+                size={12}
+                color={DESIGN.colors.accent}
+              />
+              <Text style={styles.linkText}>
+                {t("request_component.labels.view_product")}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {request.imageKey && (
+          <TouchableOpacity
+            onPress={() => setImageViewVisible(true)}
+            accessibilityLabel={t("view_image")}
+            accessibilityRole="button"
+          >
+            <Image
+              source={{ uri: `https://ts79.space/${request.imageKey}` }}
+              style={styles.productImage}
+              contentFit="cover"
+              transition={300}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* === DETAILS BAR === */}
+      <View style={styles.detailsBar}>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>
+            {t("request_component.labels.reward")}
+          </Text>
+          <Text style={[styles.detailValue, styles.rewardValue]}>
+            {formatCurrency(request.travelerFee)}
+          </Text>
+        </View>
+        <View style={styles.detailDivider} />
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>
+            {t("request_component.labels.due")}
+          </Text>
+          <Text style={styles.detailValue}>{formattedDate}</Text>
+        </View>
+        <View style={styles.detailDivider} />
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>
+            {t("request_component.labels.cost")}
+          </Text>
+          <Text style={styles.detailValue}>{formatCurrency(itemTotal)}</Text>
+        </View>
+      </View>
+
+      {/* === DESCRIPTION === */}
+      {request.description && (
+        <View style={styles.descriptionSection}>
+          <Text
+            style={styles.descriptionText}
+            numberOfLines={isDescriptionExpanded ? undefined : 2}
+          >
+            {request.description}
+          </Text>
+          <TouchableOpacity
+            onPress={toggleDescription}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.showMoreText}>
+              {isDescriptionExpanded
+                ? t("request_component.labels.show_less")
+                : t("request_component.labels.show_more")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* === ACTION BUTTON === */}
+      {isPotentialTraveler && (
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            isLoadingTrips && styles.buttonDisabled,
+            hasMatchingTrip && styles.actionButtonActive,
+          ]}
+          onPress={handleOpenOfferModal}
+          disabled={isLoadingTrips}
+          activeOpacity={0.8}
+          accessibilityLabel={t("request_component.labels.make_offer")}
+          accessibilityRole="button"
+        >
+          {isLoadingTrips ? (
+            <Text style={styles.actionButtonText}>
+              {t("request_component.labels.checking_trips")}
+            </Text>
+          ) : (
+            <>
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  hasMatchingTrip && styles.actionButtonTextActive,
+                ]}
+              >
+                {t("request_component.labels.make_offer")}
+              </Text>
+              <Feather
+                name="arrow-right"
+                size={16}
+                color={
+                  hasMatchingTrip
+                    ? DESIGN.colors.textInverse
+                    : DESIGN.colors.textSecondary
+                }
+              />
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+    </Animated.View>
+  );
 }
 
-// --- STYLESHEET UPDATED to match Trip.tsx ---
-const cardStyles = StyleSheet.create({
-    cardContainer: { 
-        backgroundColor: PALETTE.surface, 
-        borderRadius: 24, // Matched Trip
-        padding: 20, 
-        marginVertical: 10, 
-        marginHorizontal: 20, 
-        shadowColor: PALETTE.shadow, 
-        shadowOffset: { width: 0, height: 12 }, 
-        shadowOpacity: 0.1, 
-        shadowRadius: 16, 
-        elevation: 6,
-        borderWidth: 1,
-        borderColor: PALETTE.border,
-    },
-    
-    // Header
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-    travelerInfo: { flexDirection: 'row', alignItems: 'center' },
-    travelerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12, borderWidth: 1, borderColor: PALETTE.border },
-    travelerName: { fontSize: 15, fontWeight: '700', color: PALETTE.textPrimary, marginBottom: 2 },
-    subHeaderText: { fontSize: 12, color: PALETTE.textSecondary, fontWeight: '500' },
-    headerActions: { flexDirection: 'row', alignItems: 'center' },
-    actionIcon: { padding: 4 }, 
+// ============================================================================
+// STYLES
+// ============================================================================
+const styles = StyleSheet.create({
+  // === CARD ===
+  card: {
+    backgroundColor: DESIGN.colors.surface,
+    marginHorizontal: DESIGN.spacing.lg,
+    marginVertical: DESIGN.spacing.sm,
+    borderRadius: DESIGN.radius.lg,
+    padding: DESIGN.spacing.md,
+    borderWidth: 1,
+    borderColor: DESIGN.colors.border,
+    ...DESIGN.shadow.card,
+  },
 
-    // Route Visualization (Exact copy of Trip for alignment)
-    routeContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    locationBlockLeft: { alignItems: 'flex-start', flex: 1 },
-    locationBlockRight: { alignItems: 'flex-end', flex: 1 },
-    cityCode: { fontSize: 20, fontWeight: '800', color: PALETTE.textPrimary, letterSpacing: 0.5 },
-    cityName: { fontSize: 12, color: PALETTE.textSecondary, fontWeight: '500', marginTop: 2, maxWidth: 80 },
-    flagWrapper: { marginTop: 6, borderRadius: 2, overflow: 'hidden' },
-    
-    // Graphic Middle
-    routeGraphic: { flex: 1.5, alignItems: 'center', justifyContent: 'center', position: 'relative', height: 40 },
-    dottedLine: { position: 'absolute', width: '100%', height: 1, borderBottomWidth: 1, borderColor: '#CBD5E1', borderStyle: 'dashed', zIndex: 0 },
-    lottieIcon: { width: 40, height: 40, zIndex: 1, marginBottom: 4 },
+  // === HEADER ===
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: DESIGN.spacing.md,
+  },
+  userInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: DESIGN.spacing.md,
+    backgroundColor: DESIGN.colors.backgroundSecondary,
+  },
+  userTextContainer: {
+    flex: 1,
+  },
+  username: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: DESIGN.colors.textPrimary,
+    marginBottom: 2,
+  },
+  userSubtext: {
+    fontSize: 13,
+    color: DESIGN.colors.textSecondary,
+  },
+  ownerActions: {
+    flexDirection: "row",
+    gap: DESIGN.spacing.sm,
+  },
+  iconButton: {
+    padding: DESIGN.spacing.sm,
+  },
 
-    // Product Info
-    productContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    productTextColumn: { flex: 1, paddingRight: 10 },
-    productName: { fontSize: 16, fontWeight: '700', color: PALETTE.textPrimary, marginBottom: 6 },
-    linkButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start' },
-    linkText: { fontSize: 11, color: REQUEST_PALETTE.primary, fontWeight: '600', marginLeft: 4 },
-    productThumb: { width: 60, height: 60, borderRadius: 12, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: PALETTE.border },
+  // === RATING ===
+  ratingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: DESIGN.colors.ratingBg,
+    paddingHorizontal: DESIGN.spacing.sm,
+    paddingVertical: DESIGN.spacing.xs,
+    borderRadius: DESIGN.radius.sm,
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: DESIGN.colors.textPrimary,
+  },
 
-    // Details Block (Grey Box)
-    detailsBlock: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: PALETTE.softBackground,
-        borderRadius: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        justifyContent: 'space-around',
-        marginBottom: 12,
-    },
-    detailItem: { alignItems: 'center', flex: 1 },
-    detailLabel: { fontSize: 10, color: PALETTE.textSecondary, textTransform: 'uppercase', fontWeight: '600', marginBottom: 2 },
-    detailValue: { fontSize: 13, fontWeight: '700', color: PALETTE.textPrimary },
-    detailSeparator: { width: 1, height: 20, backgroundColor: PALETTE.border },
-    
-    // Description
-    descriptionContainer: { marginTop: 0 },
-    descriptionText: { color: PALETTE.textSecondary, fontSize: 13, lineHeight: 20 },
-    readMoreText: { color: REQUEST_PALETTE.primary, fontWeight: '600', fontSize: 12, marginTop: 2 },
+  // === ROUTE ===
+  routeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: DESIGN.spacing.md,
+    paddingVertical: DESIGN.spacing.sm,
+  },
+  locationBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  locationBlockEnd: {
+    justifyContent: "flex-end",
+  },
+  flagContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: DESIGN.radius.sm,
+    backgroundColor: DESIGN.colors.backgroundSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  locationTextBlock: {
+    marginHorizontal: DESIGN.spacing.sm,
+  },
+  countryCode: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: DESIGN.colors.textPrimary,
+    letterSpacing: 0.5,
+  },
+  cityName: {
+    fontSize: 12,
+    color: DESIGN.colors.textSecondary,
+    marginTop: 2,
+    maxWidth: 70,
+  },
+  textRight: {
+    textAlign: "right",
+  },
+  routeLine: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: DESIGN.spacing.sm,
+  },
+  routeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: DESIGN.colors.textSecondary,
+  },
+  routeDotEnd: {
+    backgroundColor: DESIGN.colors.accent,
+  },
+  routeDash: {
+    flex: 1,
+    height: 1,
+    backgroundColor: DESIGN.colors.border,
+    marginHorizontal: DESIGN.spacing.xs,
+  },
 
-    // Action Button
-    actionButton: { 
-        borderRadius: 14, 
-        paddingVertical: 14, 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        flexDirection: 'row', 
-        shadowColor: REQUEST_PALETTE.primary, 
-        shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.2, 
-        shadowRadius: 8, 
-        elevation: 4 
-    },
-    actionButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  // === PRODUCT ===
+  productSection: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: DESIGN.spacing.md,
+  },
+  productInfo: {
+    flex: 1,
+    paddingRight: DESIGN.spacing.md,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: DESIGN.colors.textPrimary,
+    lineHeight: 22,
+    marginBottom: DESIGN.spacing.sm,
+  },
+  linkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: DESIGN.colors.accentLight,
+    paddingHorizontal: DESIGN.spacing.sm,
+    paddingVertical: DESIGN.spacing.xs,
+    borderRadius: DESIGN.radius.sm,
+    alignSelf: "flex-start",
+    gap: 4,
+  },
+  linkText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: DESIGN.colors.accent,
+  },
+  productImage: {
+    width: 64,
+    height: 64,
+    borderRadius: DESIGN.radius.md,
+    backgroundColor: DESIGN.colors.backgroundSecondary,
+  },
 
-    // Modals
-    modalCenteredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
-    modalView: { width: '85%', margin: 20, backgroundColor: PALETTE.surface, borderRadius: 24, padding: 30, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
-    modalTitle: { marginBottom: 10, textAlign: 'center', fontSize: 18, fontWeight: 'bold', color: PALETTE.textPrimary },
-    modalText: { marginBottom: 24, textAlign: 'center', color: PALETTE.textSecondary, lineHeight: 22, fontSize: 14 },
-    modalInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 15, marginBottom: 20, width: '100%' },
-    dollarSign: { fontSize: 18, color: PALETTE.textSecondary, marginRight: 5, fontWeight: '600' },
-    modalInput: { flex: 1, color: PALETTE.textPrimary, fontSize: 18, fontWeight: '600', paddingVertical: 14 },
-    modalSubmitButton: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', width: '100%', shadowColor: REQUEST_PALETTE.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 },
-    modalButtonContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', gap: 12 },
-    modalButton: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, flex: 1, alignItems: 'center', justifyContent: 'center' },
-    modalButtonCancel: { backgroundColor: '#F3F4F6' },
-    modalButtonConfirm: { backgroundColor: REQUEST_PALETTE.primary },
-    modalButtonDestructive: { backgroundColor: PALETTE.destructive },
-    modalButtonText: { color: PALETTE.textPrimary, fontWeight: '600', fontSize: 14 },
+  // === DETAILS BAR ===
+  detailsBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: DESIGN.colors.backgroundSecondary,
+    borderRadius: DESIGN.radius.md,
+    paddingVertical: DESIGN.spacing.md,
+    paddingHorizontal: DESIGN.spacing.sm,
+    marginBottom: DESIGN.spacing.md,
+  },
+  detailItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  detailLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: DESIGN.colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: DESIGN.colors.textPrimary,
+  },
+  rewardValue: {
+    color: DESIGN.colors.accent,
+  },
+  detailDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: DESIGN.colors.border,
+  },
 
-    // Image Viewer
-    imageViewerBackdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.9)', justifyContent: 'center', alignItems: 'center' },
-    imageViewerImage: { width: '90%', height: '80%', borderRadius: 12 },
+  // === DESCRIPTION ===
+  descriptionSection: {
+    marginBottom: DESIGN.spacing.md,
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: DESIGN.colors.textSecondary,
+    lineHeight: 20,
+  },
+  showMoreText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: DESIGN.colors.accent,
+    marginTop: DESIGN.spacing.xs,
+  },
+
+  // === ACTION BUTTON ===
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: DESIGN.colors.backgroundSecondary,
+    borderRadius: DESIGN.radius.md,
+    paddingVertical: 14,
+    gap: DESIGN.spacing.sm,
+    borderWidth: 1,
+    borderColor: DESIGN.colors.border,
+  },
+  actionButtonActive: {
+    backgroundColor: DESIGN.colors.accent,
+    borderColor: DESIGN.colors.accent,
+  },
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: DESIGN.colors.textSecondary,
+  },
+  actionButtonTextActive: {
+    color: DESIGN.colors.textInverse,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
+  // === MODALS ===
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: DESIGN.colors.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "85%",
+    backgroundColor: DESIGN.colors.surface,
+    borderRadius: DESIGN.radius.xl,
+    padding: DESIGN.spacing.lg,
+    ...DESIGN.shadow.elevated,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: DESIGN.colors.textPrimary,
+    textAlign: "center",
+    marginBottom: DESIGN.spacing.sm,
+  },
+  modalText: {
+    fontSize: 14,
+    color: DESIGN.colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: DESIGN.spacing.lg,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: DESIGN.spacing.md,
+  },
+  modalButtonSecondary: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: DESIGN.radius.md,
+    backgroundColor: DESIGN.colors.backgroundSecondary,
+    alignItems: "center",
+  },
+  modalButtonSecondaryText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: DESIGN.colors.textPrimary,
+  },
+  modalButtonPrimary: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: DESIGN.radius.md,
+    backgroundColor: DESIGN.colors.textPrimary,
+    alignItems: "center",
+  },
+  modalButtonPrimaryText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: DESIGN.colors.textInverse,
+  },
+  modalButtonDestructive: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: DESIGN.radius.md,
+    backgroundColor: DESIGN.colors.error,
+    alignItems: "center",
+  },
+  modalButtonDestructiveText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: DESIGN.colors.textInverse,
+  },
+
+  // === IMAGE VIEWER ===
+  imageViewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imageViewerImage: {
+    width: "90%",
+    height: "70%",
+    borderRadius: DESIGN.radius.md,
+  },
+  imageViewerClose: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // === OFFER MODAL ===
+  offerModalContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: DESIGN.colors.surface,
+    borderTopLeftRadius: DESIGN.radius.xl,
+    borderTopRightRadius: DESIGN.radius.xl,
+    padding: DESIGN.spacing.lg,
+    paddingBottom: Platform.OS === "ios" ? 40 : DESIGN.spacing.lg,
+  },
+  offerModalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: DESIGN.colors.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: DESIGN.spacing.lg,
+  },
+  offerInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: DESIGN.colors.backgroundSecondary,
+    borderRadius: DESIGN.radius.md,
+    paddingHorizontal: DESIGN.spacing.md,
+    marginTop: DESIGN.spacing.md,
+    marginBottom: DESIGN.spacing.sm,
+  },
+  offerCurrency: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: DESIGN.colors.textSecondary,
+    marginRight: DESIGN.spacing.sm,
+  },
+  offerInput: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: "600",
+    color: DESIGN.colors.textPrimary,
+    paddingVertical: DESIGN.spacing.md,
+  },
+  offerHint: {
+    fontSize: 13,
+    color: DESIGN.colors.textSecondary,
+    textAlign: "center",
+    marginBottom: DESIGN.spacing.lg,
+  },
+  offerSubmitButton: {
+    backgroundColor: DESIGN.colors.accent,
+    borderRadius: DESIGN.radius.md,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  offerSubmitText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: DESIGN.colors.textInverse,
+  },
 });

@@ -3,14 +3,37 @@
   "where_to": "Where to?",
   "filter_route": "Filter Route",
   "clear": "Clear",
+  "search": "Search",
+  "close": "Close",
   "origin_city": "Origin City",
   "destination_city": "Destination City",
   "filter_categories": "Filter Categories",
   "filtered": "Filtered",
   "trips": "Trips",
   "requests": "Requests",
+  "travelers": "Travelers",
+  "senders": "Senders",
+  "traveler": "Traveler",
+  "requester": "Requester",
+  "condition": "Condition",
+  "punctuality": "Punctuality",
+  "comm": "Comm.",
+  "communication": "Communication",
+  "recent_travelers": "Recent Travelers",
+  "recent_requests": "Recent Requests",
+  "from": "From",
+  "to": "To",
+  "tap_to_edit": "Tap to edit",
+  "anywhere_route": "Anywhere • Any route",
+  "anywhere_any_route": "Anywhere • Any route",
   "no_items_found": "No {{type}} found",
   "no_items_subtitle": "There are no active {{type}} matching your search.\nTry changing your filters.",
+  "Istanbul": "Istanbul",
+  "Berlin": "Berlin",
+  "New York": "New York",
+  "Paris": "Paris",
+  "Tokyo": "Tokyo",
+  "Moscow": "Moscow",
   "categories": {
     "Electronics": "Electronics",
     "Clothing": "Clothing",
@@ -19,7 +42,10 @@
     "Cosmetics": "Cosmetics",
     "Pets": "Pets",
     "Cigars": "Cigars",
-    "Medication": "Medication"
+    "Medication": "Medication",
+    "Snacks": "Snacks",
+    "Gifts": "Gifts",
+    "Vitamins": "Vitamins"
   },
   "create_new": "Create New",
   "connect_prompt": "How do you want to connect today?",
@@ -31,8 +57,20 @@
   "make_request_desc": "Can't find it locally? Get products from anywhere in the world.",
   "shop_global": "Shop Global",
   "secure_escrow": "Secure Escrow",
-  "footer_trust": "Secure Payments • Verified Travelers"
-  ,
+  "footer_trust": "Secure Payments • Verified Travelers",
+  "community_active": "Travelers are active now",
+  "layout": {
+    "tabs": {
+      "home": "Home",
+      "explore": "Explore",
+      "create": "Create",
+      "inbox": "Inbox",
+      "profile": "Profile"
+    }
+  },
+  "create_screen": {
+    "or": "or"
+  },
   "explore": {
     "title": "Explore",
     "subtitle": "Connect your travels with earnings.",
@@ -43,7 +81,35 @@
     "incoming_desc": "People flying to your city.",
     "delivery_jobs": "Delivery Jobs",
     "delivery_desc": "Earn money by delivering items on your trips.",
-    "potential_earnings": "POTENTIAL EARNINGS"
+    "potential_earnings": "POTENTIAL EARNINGS",
+    "global_network": "GLOBAL NETWORK",
+    "mission_control": "Mission Control",
+    "network_live": "NETWORK LIVE",
+    "scanning_deals": "Scanning for Deals",
+    "opportunities": "opportunities",
+    "inbound_count": "{{count}} Inbound",
+    "wanted_count": "{{count}} Wanted",
+    "inbound_travelers_title": "Inbound Travelers",
+    "inbound_travelers_subtitle": "People flying your desired routes",
+    "empty_travelers": "No travelers flying your route yet.",
+    "request_pill": "REQUEST",
+    "available_bounties": "Available Bounties",
+    "bounties_subtitle": "High value items needing delivery",
+    "empty_bounties": "No bounties found for your route.",
+    "total_potential_earnings": "TOTAL POTENTIAL EARNINGS",
+    "earn": "EARN"
+  },
+  "offer_thread": {
+    "trip_request": "Trip Request",
+    "my_order": "My Order",
+    "offer_label": "OFFER",
+    "arrives": "Arrives",
+    "time": {
+      "just_now": "Just now",
+      "mins_ago": "{{count}}m ago",
+      "hours_ago": "{{count}}h ago",
+      "days_ago": "{{count}}d ago"
+    }
   },
   "cards": {
     "requesting_item": "Requesting Item",
@@ -79,12 +145,43 @@
     "make_offer_title": "Make an Offer",
     "make_offer_subtitle": "How much do you want to earn for delivering this?",
     "send_offer_btn": "Send Offer"
-  }
-  ,
+  },
   "profile": {
     "title": "Profile",
     "joined": "Joined {{date}}",
     "edit_profile": "Edit Profile",
+    "recently": "Recently",
+    "quick_actions": {
+      "edit": "Edit",
+      "invite": "Invite",
+      "support": "Support",
+      "logout": "Log Out"
+    },
+    "public": {
+      "share": "Share",
+      "report": "Report",
+      "report_title": "Report User",
+      "report_message": "Are you sure you want to report this user? Our team will review their profile for any violations.",
+      "reviews_title": "Reviews",
+      "review_count_single": "{{count}} Review",
+      "review_count_plural": "{{count}} Reviews",
+      "empty_reviews_title": "No Reviews Yet",
+      "empty_reviews_desc": "{{name}} hasn't received any reviews as a {{role}} yet."
+    },
+    "wallet": {
+      "title": "Transaction History",
+      "balance": "Balance",
+      "withdraw_funds": "Withdraw Funds",
+      "empty_title": "No transactions yet",
+      "empty_desc": "When you complete a delivery or withdraw funds, your history will appear here.",
+      "fund_btn": "Fund Wallet (Coming Soon)"
+    },
+    "context": {
+      "active_items": "Active Items",
+      "history": "History",
+      "reviews": "Reviews",
+      "items_count": "{{count}} items"
+    },
     "tabs": {
       "traveler": "Traveler",
       "shopper": "Shopper"
@@ -108,7 +205,7 @@
     "toast": {
       "username_copied": "Username Copied"
     },
-    "share_msg": "Check out {{name}}'s profile on GrabrApp!",
+    "share_msg": "Check out {{name}}'s profile on PeykLink!",
     "modals": {
       "edit": {
         "title": "Edit Profile",
@@ -116,13 +213,9 @@
         "fullname_placeholder": "Your Name",
         "bio_label": "Bio",
         "bio_placeholder": "Tell us about yourself...",
-        "save_btn": "Save Changes"
-      },
-      "wallet": {
-        "title": "Transaction History",
-        "empty_title": "No transactions yet",
-        "empty_desc": "When you complete a delivery or withdraw funds, your history will appear here.",
-        "fund_btn": "Fund Wallet (Coming Soon)"
+        "save_btn": "Save Changes",
+        "change_photo": "Tap to change photo",
+        "logout": "Log Out"
       }
     },
     "empty": {
@@ -133,15 +226,27 @@
       "desc_active": "You don't have any active {{type}} at the moment.",
       "desc_archive": "Your completed or archived items will appear here."
     }
-  }
-  ,
+  },
   "inbox": {
     "title": "Inbox",
-    "search_placeholder": "Search items or users...",
+    "search_placeholder": "Search trips, people, items...",
     "tabs": {
       "all": "All",
-      "sent": "Sent",
-      "received": "Received"
+      "sent": "My Offers",
+      "received": "Offers to Me",
+      "requests": "Requests",
+      "trips": "Trips"
+    },
+    "section": {
+      "all": "Active Negotiations",
+      "sent": "My Offers",
+      "received": "Offers to Me",
+      "recent_activity": "Recent Activity",
+      "my_orders": "My Orders",
+      "my_trips": "My Trips",
+      "search_results": "Search Results",
+      "items_count": "{{count}} items",
+      "found_count": "{{count}} found"
     },
     "status": {
       "found_result": "Found {{count}} result",
@@ -159,8 +264,7 @@
       "no_received": "No Received Offers",
       "no_received_desc": "Offers you've received from others will show up here."
     }
-  }
-  ,
+  },
   "create_trip": {
     "title_edit": "Edit Trip",
     "title_plan": "Plan Trip",
@@ -197,8 +301,7 @@
       "submit_error": "Could not {{action}} your trip. Please try again.",
       "no_airline_found": "No airline found matching \"{{query}}\""
     }
-  }
-  ,
+  },
   "create_request": {
     "title_edit": "Edit Request",
     "title_direct": "Direct Request",
@@ -252,10 +355,12 @@
       "invalid_file_type": "Invalid File Type",
       "invalid_file_msg": "Only image files are allowed. Please select a valid image (JPEG, PNG, etc.).",
       "file_too_large": "File Too Large",
-      "file_too_large_msg": "The image is too large ({{size}} MB). Maximum file size is 5MB. Please select a smaller image."
+      "file_too_large_msg": "The image is too large ({{size}} MB). Maximum file size is 5MB. Please select a smaller image.",
+      "permission_title": "Permission required",
+      "permission_msg": "Please grant permission to access your photo library.",
+      "unknown_error": "An unknown error occurred"
     }
-  }
-  ,
+  },
   "payment": {
     "title": "Confirm and Pay",
     "loading_error": "Error loading payment details.",
@@ -275,14 +380,26 @@
       "failed_title": "Payment Failed",
       "failed_msg": "Could not process payment. Please try again."
     }
-  }
-  ,
+  },
   "offer": {
     "loading_error": "Could not identify current user.",
     "loading_data_error": "Offer data could not be loaded.",
     "btn_go_back": "Go Back",
+    "requested_by": "Requested By",
+    "steps": {
+      "offer": "Offer",
+      "agreed": "Agreed",
+      "paid": "Paid",
+      "done": "Done"
+    },
     "status": {
       "offer_sent": "Offer Sent",
+      "reply_needed": "Reply Needed",
+      "awaiting_payment": "Awaiting Payment",
+      "in_progress": "In Progress",
+      "delivered": "Delivered",
+      "declined": "Declined",
+      "cancelled": "Cancelled",
       "waiting_traveler": "Waiting for {{name}} to accept your offer to bring the item.",
       "waiting_requester": "Waiting for {{name}} to accept your delivery fee proposal.",
       "action_required": "Action Required",
@@ -349,8 +466,7 @@
       "destination": "Destination",
       "traveler_label": "Traveler"
     }
-  }
-  ,
+  },
   "confirm_delivery": {
     "title": "Confirm Delivery",
     "delivering_item": "Delivering Item",
@@ -368,8 +484,7 @@
       "error_title": "System Error",
       "error_msg": "Something went wrong. Please try again."
     }
-  }
-  ,
+  },
   "trip_component": {
     "delete_error": "Error deleting the trip",
     "offer_error": "Error sending offer",
@@ -394,8 +509,7 @@
       "traveler": "Traveler",
       "request_delivery": "Request Delivery"
     }
-  }
-  ,
+  },
   "request_component": {
     "delete_error": "Error deleting the request",
     "no_matching_trip": "No Matching Trip",
@@ -406,6 +520,7 @@
     "duplicate_offer_title": "You Already Have an Offer",
     "duplicate_offer_msg": "You can view your existing offer in the inbox.",
     "url_error": "Could not open this URL",
+    "suggested_fee": "Suggested Fee",
     "labels": {
       "new": "New",
       "requesting_item": "Requesting Item",
@@ -435,6 +550,56 @@
         "cancel": "Cancel",
         "confirm": "Confirm"
       }
+    }
+  },
+  "review_prompt": {
+    "badge": "LEAVE A REVIEW",
+    "title": "Rate your experience",
+    "subtitle": "How was your interaction with {{name}}?"
+  },
+  "review": {
+    "hints": {
+      "0": "Tap stars to rate",
+      "1": "Poor",
+      "2": "Could be better",
+      "3": "It was okay",
+      "4": "Very Good",
+      "5": "Excellent!"
+    },
+    "progress_complete": "{{percent}}% complete",
+    "alerts": {
+      "rating_required_title": "Rating Required",
+      "rating_required_msg": "Please tap the stars to rate your experience.",
+      "submit_success_title": "Review Submitted",
+      "submit_success_msg": "Thanks for helping the community!",
+      "submit_error_title": "Error",
+      "submit_error_msg": "Failed to submit review. Please try again."
+    },
+    "questions": {
+      "delivery": "How was your delivery from {{name}}?",
+      "experience": "How was your experience with {{name}}?"
+    },
+    "subtext": {
+      "request": "Request: {{name}}",
+      "transaction": "Transaction for: {{name}}"
+    },
+    "labels": {
+      "overall": "OVERALL RATING",
+      "communication": "Communication",
+      "punctuality": "Punctuality",
+      "item_condition": "Item Condition"
+    },
+    "headers": {
+      "delivery": "Delivery Details",
+      "interaction": "Interaction Details",
+      "comments": "Additional Comments"
+    },
+    "placeholders": {
+      "traveler": "Was the item well packed? Was the traveler friendly?",
+      "requester": "Was the requester easy to meet up with?"
+    },
+    "buttons": {
+      "submit": "Submit Review"
     }
   }
 }

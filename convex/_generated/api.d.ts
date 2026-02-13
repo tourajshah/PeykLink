@@ -9,6 +9,7 @@
  */
 
 import type * as crons from "../crons.js";
+import type * as crypto from "../crypto.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as migration from "../migration.js";
@@ -28,6 +29,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   crons: typeof crons;
+  crypto: typeof crypto;
   http: typeof http;
   messages: typeof messages;
   migration: typeof migration;

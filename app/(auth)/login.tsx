@@ -11,7 +11,9 @@ export default function login() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { createdSessionId, setActive } = await startSSOFlow({ strategy: "oauth_google" });
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: "oauth_google",
+      });
 
       if (setActive && createdSessionId) {
         setActive({ session: createdSessionId });
@@ -26,11 +28,8 @@ export default function login() {
     <View style={styles.container}>
       {/* BRAND SECTION */}
       <View style={styles.brandSection}>
-        <View style={styles.logoContainer}>
-          <Ionicons name="leaf" size={32} color={COLORS.primary} />
-        </View>
-        <Text style={styles.appName}>spotlight</Text>
-        <Text style={styles.tagline}>don't miss anything</Text>
+        <Text style={styles.appName}>Peyklink</Text>
+        <Text style={styles.tagline}>Yolun Üzerinde, Sana Doğru</Text>
       </View>
 
       {/* ILLUSTRATION */}
